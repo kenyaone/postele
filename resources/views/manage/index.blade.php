@@ -9,6 +9,7 @@
 @endphp
 
 @section('content')
+@include('manage.partials.yield-alerts')
     <p class="text-sm text-gray-500 -mt-4 mb-6">{{ now()->format('l, j F Y \a\t H:i') }}</p>
 
     {{-- TODAY --}}

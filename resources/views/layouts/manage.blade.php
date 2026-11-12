@@ -15,6 +15,7 @@
         ['Menu',             'manage.menu',           '&#127869;', 'manage.menu',         ['manager']],
         ['Procurement',      'manage.procurement',    '&#128230;', 'manage.procurement*', ['manager']],
         ['Stock count',      'stock.count',           '&#128203;', 'stock.*',             ['manager', 'stock']],
+        ['Yield &amp; variance', 'stock.yield', '&#9878;', 'stock.yield*', ['manager', 'stock']],
         ['Expenses',         'manage.expenses.index', '&#128184;', 'manage.expenses.*',   ['manager']],
         ['HR &amp; Payroll', 'manage.hr',             '&#128101;', 'manage.hr*',          ['manager']],
         ['Reports',          'manage.reports',        '&#128202;', 'manage.reports*',     ['manager']],

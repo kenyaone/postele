@@ -9,6 +9,7 @@ use App\Http\Controllers\Manage\HrController;
 use App\Http\Controllers\Manage\MenuController;
 use App\Http\Controllers\Manage\UserController;
 use App\Http\Controllers\StockController;
+use App\Http\Controllers\YieldController;
 use App\Http\Controllers\Manage\ProcurementController;
 use App\Http\Controllers\Manage\ReportController;
 use App\Http\Controllers\Manage\SettingsController;
@@ -107,4 +108,11 @@ Route::middleware(['auth', 'role:stock,manager'])->prefix('stock')->name('stock.
     Route::post('/items',               [StockController::class, 'storeItem'])->name('items.store');
     Route::patch('/items/{stockItem}',  [StockController::class, 'updateItem'])->name('items.update');
     Route::get('/shopping-list',         [StockController::class, 'printShopping'])->name('shopping.print');
+    // Raw material yield vs sales (rules editable by managers only, checked in the controller)
+    Route::get('/yield',                    [YieldController::class, 'index'])->name('yield');
+    Route::post('/yield/notes',             [YieldController::class, 'storeNote'])->name('yield.notes');
+    Route::get('/yield/rules/create',       [YieldController::class, 'create'])->name('yield.rules.create');
+    Route::post('/yield/rules',             [YieldController::class, 'store'])->name('yield.rules.store');
+    Route::get('/yield/rules/{rule}/edit',  [YieldController::class, 'edit'])->name('yield.rules.edit');
+    Route::put('/yield/rules/{rule}',       [YieldController::class, 'update'])->name('yield.rules.update');
 });

@@ -75,6 +75,7 @@ class DashboardController extends Controller
             'days'         => $days,
             'chartMax'     => $chartMax,
             'topItems'     => $topItems,
+            'yieldAlerts'  => app(\App\Services\YieldReport::class)->openAlerts(7),
             'openTickets'  => Ticket::whereIn('status', ['open', 'sent'])->count(),
             'openShifts'   => Shift::with('user')->whereNull('closed_at')->get(),
             'printPending' => PrintJob::where('status', 'pending')->count(),
