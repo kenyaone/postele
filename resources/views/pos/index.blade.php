@@ -57,7 +57,7 @@
 
         <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
             {{-- MENU --}}
-            <div class="lg:col-span-2 space-y-5">
+            <div id="menu-col" class="lg:col-span-2 space-y-3 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-2">
                 @if (! $ticket)
                     <div class="bg-white rounded-xl shadow p-6 text-center">
                         <p class="text-gray-600 mb-4">No open ticket.</p>
@@ -69,31 +69,11 @@
                     </div>
                 @endif
 
-                @foreach ($categories as $cat)
-                    @if ($cat->items->isNotEmpty())
-                        <div>
-                            <h2 class="font-semibold text-emerald-800 mb-2">{{ $cat->name }}</h2>
-                            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2">
-                                @foreach ($cat->items as $item)
-                                    <form method="POST" action="{{ $ticket ? route('pos.tickets.items.store', $ticket) : '#' }}">
-                                        @csrf
-                                        <input type="hidden" name="item_id" value="{{ $item->id }}">
-                                        <button type="submit"
-                                                {{ ($ticket && $ticket->status === 'open') ? '' : 'disabled' }}
-                                                class="w-full h-full bg-white rounded-lg shadow hover:shadow-md hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed p-3 text-left">
-                                            <div class="font-medium text-sm">{{ $item->name }}</div>
-                                            <div class="text-emerald-700 font-bold">KSh {{ number_format($item->price, 2) }}</div>
-                                        </button>
-                                    </form>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-                @endforeach
+                @include('pos.partials.menu')
             </div>
 
             {{-- TICKET PANEL --}}
-            <aside class="lg:col-span-1">
+            <aside class="lg:col-span-1" id="ticket-panel">
                 <div class="bg-white rounded-xl shadow p-4 sticky top-4">
                     @if (! $ticket)
                         <p class="text-gray-500 text-sm">Start a ticket to begin.</p>
