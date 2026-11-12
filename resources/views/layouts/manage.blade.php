@@ -55,7 +55,7 @@
             <span class="w-10 h-10 rounded-2xl bg-saffron text-espresso grid place-items-center text-xl shadow">&#9749;</span>
             <span class="leading-tight"><span class="block font-display text-lg font-extrabold">{{ config('pos.cafe_name') }}</span><span class="block text-[11px] uppercase tracking-wider text-crema/50">Back office</span></span>
         </a>
-        <nav class="flex md:flex-col gap-1 px-2 pb-3 overflow-x-auto md:overflow-y-auto md:overflow-x-visible">
+        <nav class="flex md:flex-col md:flex-1 md:min-h-0 gap-1 px-2 pb-3 overflow-x-auto md:overflow-y-auto md:overflow-x-visible">
             @foreach ($nav as [$label, $route, $icon, $active, $roles])
                 @continue(! in_array($me->role, $roles, true))
                 @if ($route && Route::has($route))
