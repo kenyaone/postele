@@ -35,6 +35,12 @@ Add-Type -AssemblyName System.Drawing
 Write-Host 'Tele Cafe print bridge is running. Leave this window open (you can minimise it).' -ForegroundColor Green
 Write-Host 'Printers on this PC (type the USB one exactly like this on the Printers page):'
 [System.Drawing.Printing.PrinterSettings]::InstalledPrinters | ForEach-Object { Write-Host "   $_" -ForegroundColor Cyan }
+function Resolve-TelePrinter([string]$want) {
+    $names = @([System.Drawing.Printing.PrinterSettings]::InstalledPrinters)
+    $m = @($names | Where-Object { $_ -ieq $want }); if ($m.Count -ge 1) { return $m[0] }
+    $m = @($names | Where-Object { $_ -like "*$want*" -or $want -like "*$_*" }); if ($m.Count -eq 1) { return $m[0] }
+    throw "no printer called '$want' on this PC. Printers here: " + ($names -join ' | ')
+}
 while ($true) {
     try {
         $r = Invoke-RestMethod -Uri "$Api/jobs/pending" -Headers $H -TimeoutSec 20
@@ -44,7 +50,7 @@ while ($true) {
             try {
                 $bytes = [Convert]::FromBase64String($j.payload_b64)
                 if ($j.conn -eq 'usb') {
-                    [TeleRawPrint]::Send($j.windows_name, $bytes)
+                    [TeleRawPrint]::Send((Resolve-TelePrinter $j.windows_name), $bytes)
                 } else {
                     $c = New-Object System.Net.Sockets.TcpClient
                     $wait = $c.BeginConnect($j.ip, [int]$j.port, $null, $null)
