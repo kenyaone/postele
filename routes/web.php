@@ -6,6 +6,7 @@ use App\Http\Controllers\Manage\DashboardController;
 use App\Http\Controllers\Manage\ExpenseController;
 use App\Http\Controllers\Manage\ItemController;
 use App\Http\Controllers\Manage\MenuController;
+use App\Http\Controllers\Manage\ProcurementController;
 use App\Http\Controllers\Manage\ReportController;
 use App\Http\Controllers\Manage\SettingsController;
 use App\Http\Controllers\Pos\PosController;
@@ -56,6 +57,17 @@ Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->
     Route::delete('/expenses/{expense}',    [ExpenseController::class, 'destroy'])->name('expenses.destroy');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports');
+
+    Route::get('/procurement',                            [ProcurementController::class, 'index'])->name('procurement');
+    Route::post('/procurement/purchases',                 [ProcurementController::class, 'storePurchase'])->name('procurement.purchases.store');
+    Route::get('/procurement/purchases/{purchase}',       [ProcurementController::class, 'showPurchase'])->name('procurement.purchase');
+    Route::patch('/procurement/purchases/{purchase}',     [ProcurementController::class, 'updatePurchase'])->name('procurement.purchases.update');
+    Route::delete('/procurement/purchases/{purchase}',    [ProcurementController::class, 'destroyPurchase'])->name('procurement.purchases.destroy');
+    Route::post('/procurement/purchases/{purchase}/pay',  [ProcurementController::class, 'storePayment'])->name('procurement.payments.store');
+    Route::delete('/procurement/payments/{payment}',      [ProcurementController::class, 'destroyPayment'])->name('procurement.payments.destroy');
+    Route::post('/procurement/suppliers',                 [ProcurementController::class, 'storeSupplier'])->name('procurement.suppliers.store');
+    Route::get('/procurement/suppliers/{supplier}',       [ProcurementController::class, 'showSupplier'])->name('procurement.supplier');
+    Route::patch('/procurement/suppliers/{supplier}',     [ProcurementController::class, 'updateSupplier'])->name('procurement.suppliers.update');
 
     Route::post('/categories',              [CategoryController::class, 'store'])->name('categories.store');
     Route::patch('/categories/{category}',  [CategoryController::class, 'update'])->name('categories.update');

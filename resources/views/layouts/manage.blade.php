@@ -12,7 +12,7 @@
         ['Dashboard',    'manage.index',          '&#128200;', 'manage.index'],
         ['Point of Sale', 'pos.index',            '&#128722;', 'pos.*'],
         ['Menu',         'manage.menu',           '&#127869;', 'manage.menu'],
-        ['Procurement',  null,                    '&#128230;', null],
+        ['Procurement',  'manage.procurement',    '&#128230;', 'manage.procurement*'],
         ['Expenses',     'manage.expenses.index', '&#128184;', 'manage.expenses.*'],
         ['HR &amp; Payroll', null,                '&#128101;', null],
         ['Reports',      'manage.reports',        '&#128202;', 'manage.reports*'],
