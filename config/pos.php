@@ -7,11 +7,4 @@ return [
     'thank_you_wa' => env('POS_WA', 'wa.me/254797953918'),
     'bridge_token' => env('BRIDGE_TOKEN'),
 
-    // Manager login OTP over WhatsApp (switched on in Manage > Settings)
-    'otp_driver'     => env('POS_OTP_DRIVER', 'log'),
-    'at_username'    => env('AT_USERNAME'),
-    'at_api_key'     => env('AT_API_KEY'),
-    'at_wa_number'   => env('AT_WA_NUMBER'),
-    'at_wa_template' => env('AT_WA_TEMPLATE_ID'),
-    'at_wa_url'      => env('AT_WA_URL'),
 ];

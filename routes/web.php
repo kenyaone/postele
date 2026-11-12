@@ -23,9 +23,6 @@ Route::get('/', function () {
 
 Route::get('/login',   [PinLoginController::class, 'show'])->name('login');
 Route::post('/login',  [PinLoginController::class, 'store'])->middleware('throttle:10,1')->name('login.store');
-Route::get('/login/otp',          [PinLoginController::class, 'showOtp'])->name('login.otp');
-Route::post('/login/otp',         [PinLoginController::class, 'verifyOtp'])->middleware('throttle:10,1')->name('login.otp.verify');
-Route::post('/login/otp/resend',  [PinLoginController::class, 'resendOtp'])->middleware('throttle:3,1')->name('login.otp.resend');
 Route::post('/logout', [PinLoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
 Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name('pos.')->group(function () {
@@ -50,6 +47,7 @@ Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->
     Route::get('/menu', [MenuController::class, 'index'])->name('menu');
     Route::get('/settings',   [SettingsController::class, 'edit'])->name('settings');
     Route::patch('/settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::patch('/settings/password', [SettingsController::class, 'updatePassword'])->name('password.update');
 
     Route::get('/expenses',                 [ExpenseController::class, 'index'])->name('expenses.index');
     Route::post('/expenses',                [ExpenseController::class, 'store'])->name('expenses.store');

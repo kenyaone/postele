@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Manage;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
-use App\Services\WhatsAppOtpSender;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class SettingsController extends Controller
 {
@@ -18,47 +19,45 @@ class SettingsController extends Controller
                 'phone'        => config('pos.phone'),
                 'thank_you_wa' => config('pos.thank_you_wa'),
             ],
-            'myWhatsapp' => $request->user()->whatsapp_phone,
-            'otpEnabled' => Setting::where('key', 'otp_enabled')->value('value') === '1',
-            'otpReady'   => WhatsAppOtpSender::ready(),
+            'hasPassword' => $request->user()->usesPassword(),
         ]);
     }
 
     public function update(Request $request)
     {
         $data = $request->validate([
-            'cafe_name'      => 'required|string|max:40',
-            'till_number'    => ['required', 'string', 'regex:/^[0-9]{4,10}$/'],
-            'phone'          => 'nullable|string|max:30',
-            'thank_you_wa'   => 'nullable|string|max:60',
-            'whatsapp_phone' => 'nullable|string|max:20',
-            'otp_enabled'    => 'nullable|boolean',
+            'cafe_name'    => 'required|string|max:40',
+            'till_number'  => ['required', 'string', 'regex:/^[0-9]{4,10}$/'],
+            'phone'        => 'nullable|string|max:30',
+            'thank_you_wa' => 'nullable|string|max:60',
         ], [
             'till_number.regex' => 'Till number must be 4 to 10 digits, numbers only.',
         ]);
 
-        $myPhone = null;
-        if (! empty($data['whatsapp_phone'])) {
-            $myPhone = WhatsAppOtpSender::normalize($data['whatsapp_phone']);
-            if (! $myPhone) {
-                return back()->withInput()->withErrors(['whatsapp_phone' => 'Enter a Kenyan mobile number, e.g. 0712 345 678.']);
-            }
-        }
-
-        $wantOtp = (bool) ($data['otp_enabled'] ?? false);
-        if ($wantOtp && ! WhatsAppOtpSender::ready()) {
-            return back()->withInput()->withErrors(['otp_enabled' => 'WhatsApp codes cannot be switched on until the Africa\'s Talking details are added to .env.']);
-        }
-        if ($wantOtp && ! $myPhone) {
-            return back()->withInput()->withErrors(['otp_enabled' => 'Add your WhatsApp number first, or you could lock yourself out.']);
-        }
-
         foreach (Setting::EDITABLE as $key) {
             Setting::put($key, isset($data[$key]) ? trim($data[$key]) : null);
         }
-        Setting::put('otp_enabled', $wantOtp ? '1' : '0');
-        $request->user()->update(['whatsapp_phone' => $myPhone]);
 
         return redirect()->route('manage.settings')->with('ok', 'Settings saved.');
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $user = $request->user();
+        $data = $request->validate([
+            'current'  => 'required|string|max:100',
+            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+        ]);
+
+        $currentOk = $user->usesPassword()
+            ? Hash::check($data['current'], $user->password)
+            : ($user->pin_hash && Hash::check($data['current'], $user->pin_hash));
+        if (! $currentOk) {
+            return back()->withErrors(['current' => $user->usesPassword() ? 'Your current password is wrong.' : 'Your current PIN is wrong.']);
+        }
+
+        $user->forceFill(['password' => $data['password'], 'password_set_at' => now()])->save();
+
+        return redirect()->route('manage.settings')->with('ok', 'Password saved. From now on, sign in with it instead of your PIN.');
     }
 }

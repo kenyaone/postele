@@ -32,7 +32,14 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'active' => 'boolean',
+            'password_set_at' => 'datetime',
         ];
+    }
+
+    /** Managers sign in with a password once one has been set; everyone else uses a PIN. */
+    public function usesPassword(): bool
+    {
+        return $this->role === 'manager' && $this->password_set_at !== null;
     }
 
     public function canManage(): bool
