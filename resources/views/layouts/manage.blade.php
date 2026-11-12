@@ -8,15 +8,18 @@
 </head>
 <body class="bg-gray-50 text-gray-900">
 @php
+    // [label, route, icon, active pattern, roles that see it]
     $nav = [
-        ['Dashboard',    'manage.index',          '&#128200;', 'manage.index'],
-        ['Point of Sale', 'pos.index',            '&#128722;', 'pos.*'],
-        ['Menu',         'manage.menu',           '&#127869;', 'manage.menu'],
-        ['Procurement',  'manage.procurement',    '&#128230;', 'manage.procurement*'],
-        ['Expenses',     'manage.expenses.index', '&#128184;', 'manage.expenses.*'],
-        ['HR &amp; Payroll', null,                '&#128101;', null],
-        ['Reports',      'manage.reports',        '&#128202;', 'manage.reports*'],
-        ['Settings',     'manage.settings',       '&#9881;',   'manage.settings*'],
+        ['Dashboard',        'manage.index',          '&#128200;', 'manage.index',        ['manager']],
+        ['Point of Sale',    'pos.index',             '&#128722;', 'pos.*',               ['manager']],
+        ['Menu',             'manage.menu',           '&#127869;', 'manage.menu',         ['manager']],
+        ['Procurement',      'manage.procurement',    '&#128230;', 'manage.procurement*', ['manager']],
+        ['Stock count',      'stock.count',           '&#128203;', 'stock.*',             ['manager', 'stock']],
+        ['Expenses',         'manage.expenses.index', '&#128184;', 'manage.expenses.*',   ['manager']],
+        ['HR &amp; Payroll', null,                    '&#128101;', null,                  ['manager']],
+        ['Reports',          'manage.reports',        '&#128202;', 'manage.reports*',     ['manager']],
+        ['Users',            'manage.users.index',    '&#128100;', 'manage.users.*',      ['manager']],
+        ['Settings',         'manage.settings',       '&#9881;',   'manage.settings*',    ['manager']],
     ];
 @endphp
 <div class="min-h-screen md:flex">
@@ -26,7 +29,8 @@
             <div class="text-xs text-emerald-300">Back office</div>
         </div>
         <nav class="flex md:flex-col gap-1 px-2 pb-3 overflow-x-auto md:overflow-visible">
-            @foreach ($nav as [$label, $route, $icon, $active])
+            @foreach ($nav as [$label, $route, $icon, $active, $roles])
+                @continue(! in_array(auth()->user()->role, $roles, true))
                 @if ($route && Route::has($route))
                     <a href="{{ route($route) }}"
                        class="flex items-center gap-2 px-3 py-2 rounded-lg whitespace-nowrap text-sm {{ request()->routeIs($active) ? 'bg-emerald-700 text-white font-semibold' : 'hover:bg-emerald-800' }}">

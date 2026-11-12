@@ -6,6 +6,8 @@ use App\Http\Controllers\Manage\DashboardController;
 use App\Http\Controllers\Manage\ExpenseController;
 use App\Http\Controllers\Manage\ItemController;
 use App\Http\Controllers\Manage\MenuController;
+use App\Http\Controllers\Manage\UserController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\Manage\ProcurementController;
 use App\Http\Controllers\Manage\ReportController;
 use App\Http\Controllers\Manage\SettingsController;
@@ -18,6 +20,7 @@ Route::get('/', function () {
     if (! Auth::check()) return redirect()->route('login');
     return match (Auth::user()->role) {
         'manager' => redirect()->route('manage.index'),
+        'stock'   => redirect()->route('stock.count'),
         default   => redirect()->route('pos.index'),
     };
 })->name('home');
@@ -58,6 +61,11 @@ Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports');
 
+    Route::get('/users',              [UserController::class, 'index'])->name('users.index');
+    Route::post('/users',             [UserController::class, 'store'])->name('users.store');
+    Route::get('/users/{user}/edit',  [UserController::class, 'edit'])->name('users.edit');
+    Route::patch('/users/{user}',     [UserController::class, 'update'])->name('users.update');
+
     Route::get('/procurement',                            [ProcurementController::class, 'index'])->name('procurement');
     Route::post('/procurement/purchases',                 [ProcurementController::class, 'storePurchase'])->name('procurement.purchases.store');
     Route::get('/procurement/purchases/{purchase}',       [ProcurementController::class, 'showPurchase'])->name('procurement.purchase');
@@ -76,4 +84,13 @@ Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->
     Route::post('/items',          [ItemController::class, 'store'])->name('items.store');
     Route::patch('/items/{item}',  [ItemController::class, 'update'])->name('items.update');
     Route::delete('/items/{item}', [ItemController::class, 'destroy'])->name('items.destroy');
+});
+
+// Stock counting: kitchen/stock staff and managers
+Route::middleware(['auth', 'role:stock,manager'])->prefix('stock')->name('stock.')->group(function () {
+    Route::get('/',                     [StockController::class, 'count'])->name('count');
+    Route::post('/',                    [StockController::class, 'saveCounts'])->name('count.save');
+    Route::get('/items',                [StockController::class, 'items'])->name('items');
+    Route::post('/items',               [StockController::class, 'storeItem'])->name('items.store');
+    Route::patch('/items/{stockItem}',  [StockController::class, 'updateItem'])->name('items.update');
 });
