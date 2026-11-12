@@ -11,7 +11,8 @@
     // [label, route, icon, active pattern, roles that see it]
     $nav = [
         ['Dashboard',        'manage.index',          '&#128200;', 'manage.index',        ['manager']],
-        ['Point of Sale',    'pos.index',             '&#128722;', 'pos.*',               ['manager']],
+        ['Point of Sale',    'pos.index',             '&#128722;', 'pos.*',               ['manager', 'cashier', 'waiter']],
+        ['Bills', 'pos.bills', '&#129534;', 'pos.bills*', ['manager', 'cashier', 'waiter']],
         ['Menu',             'manage.menu',           '&#127869;', 'manage.menu',         ['manager']],
         ['Procurement',      'manage.procurement',    '&#128230;', 'manage.procurement*', ['manager']],
         ['Stock count',      'stock.count',           '&#128203;', 'stock.*',             ['manager', 'stock']],

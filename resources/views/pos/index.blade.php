@@ -32,6 +32,7 @@
                 @if(auth()->user()->role === 'manager')
                     <a href="{{ route('manage.index') }}" class="text-blue-600 hover:underline">Manage</a>
                 @endif
+                <a href="{{ route('pos.bills') }}" class="text-blue-600 hover:underline mr-3">Bills</a>
                 <form method="POST" action="{{ route('logout') }}">@csrf
                     <button class="text-red-600 hover:underline">Logout</button>
                 </form>
@@ -176,6 +177,14 @@
                             <div class="bg-emerald-600 text-white rounded p-4 text-center mb-3">
                                 <div class="text-2xl font-bold">&#10003; PAID</div>
                                 <div class="text-sm opacity-90">Payment recorded</div>
+                                @php $pay = $ticket->payments()->latest('id')->first(); @endphp
+                                @if ($pay && $pay->kk_reference)
+                                    @php [$vLabel, $vTone] = $pay->verification(); @endphp
+                                    <div class="mt-2 text-sm">M-Pesa code <span class="font-mono font-bold text-lg tracking-wider">{{ $pay->kk_reference }}</span></div>
+                                    <div class="mt-1 inline-block text-xs font-semibold rounded px-2 py-0.5 {{ $vTone === 'ok' ? 'bg-white text-emerald-700' : 'bg-amber-200 text-amber-900' }}">{!! $vTone === 'ok' ? '&#10003;' : '&#9888;' !!} {{ $vLabel }}</div>
+                                @elseif ($pay)
+                                    <div class="mt-1 text-sm">Paid in cash</div>
+                                @endif
                             </div>
                             <button type="button" onclick="printBill('{{ route('pos.tickets.bill', [$ticket, 'mode' => 'receipt']) }}')"
                                     class="w-full border border-gray-400 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded py-2 mb-2">&#129534;&nbsp; Print receipt</button>

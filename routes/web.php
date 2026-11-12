@@ -33,6 +33,7 @@ Route::post('/login',  [PinLoginController::class, 'store'])->middleware('thrott
 Route::post('/logout', [PinLoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
 Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name('pos.')->group(function () {
+    Route::get('/bills', [\App\Http\Controllers\Pos\BillsController::class, 'index'])->name('bills');
     Route::get('/',                                      [PosController::class, 'index'])->name('index');
     Route::post('/tickets',                              [PosController::class, 'startTicket'])->name('tickets.store');
     Route::get('/tickets/{ticket}',                      [PosController::class, 'show'])->name('tickets.show');
