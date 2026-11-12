@@ -106,9 +106,9 @@
                             <div class="flex-1 min-w-0"><div class="font-semibold leading-tight truncate">{{ $line->item->name }}</div><div class="text-xs text-roast/60">KSh {{ number_format((float) $line->unit_price) }} each</div></div>
                             @if ($ticket->status === 'open')
                                 <div class="flex items-center rounded-full bg-crema ring-1 ring-roast/15">
-                                    <form method="POST" action="{{ route('pos.tickets.items.update', [$ticket, $line]) }}">@csrf @method('PATCH')<input type="hidden" name="qty" value="{{ $line->qty - 1 }}"><button class="w-9 h-9 rounded-full text-lg font-bold hover:bg-white" title="{{ $line->qty > 1 ? 'One less' : 'Remove' }}">{!! $line->qty > 1 ? '&minus;' : '&#128465;' !!}</button></form>
-                                    <span class="w-7 text-center font-extrabold">{{ $line->qty }}</span>
-                                    <form method="POST" action="{{ route('pos.tickets.items.update', [$ticket, $line]) }}">@csrf @method('PATCH')<input type="hidden" name="qty" value="{{ $line->qty + 1 }}"><button class="w-9 h-9 rounded-full text-lg font-bold hover:bg-white" title="One more">+</button></form>
+                                    <form method="POST" action="{{ route('pos.tickets.items.update', [$ticket, $line]) }}">@csrf @method('PATCH')<input type="hidden" name="qty" value="{{ $line->qty - 1 }}"><button class="w-12 h-12 rounded-full text-xl font-bold hover:bg-white active:bg-amber-100" title="{{ $line->qty > 1 ? 'One less' : 'Remove' }}">{!! $line->qty > 1 ? '&minus;' : '&#128465;' !!}</button></form>
+                                    <span class="w-8 text-center text-lg font-extrabold">{{ $line->qty }}</span>
+                                    <form method="POST" action="{{ route('pos.tickets.items.update', [$ticket, $line]) }}">@csrf @method('PATCH')<input type="hidden" name="qty" value="{{ $line->qty + 1 }}"><button class="w-12 h-12 rounded-full text-xl font-bold hover:bg-white active:bg-amber-100" title="One more">+</button></form>
                                 </div>
                             @else
                                 <span class="text-sm font-extrabold text-roast/80">&times;{{ $line->qty }}</span>
@@ -158,7 +158,7 @@
                         <form method="POST" action="{{ route('pos.tickets.close', $ticket) }}" id="cash-form" data-total="{{ $ticket->total }}" class="space-y-3">
                             @csrf
                             <label class="block"><span class="text-xs font-bold uppercase tracking-wider text-roast/60">Cash received (KSh)</span>
-                                <input id="cash-in" type="number" name="cash_received" step="0.01" min="0" required inputmode="decimal" value="{{ old('cash_received', (string) $t) }}" class="mt-1 w-full rounded-2xl ring-1 ring-roast/20 px-4 py-3 text-3xl font-display font-extrabold text-right focus:outline-none focus:ring-2 focus:ring-saffron">
+                                <input id="cash-in" data-keypad="money" data-keypad-label="Cash received" type="number" name="cash_received" step="0.01" min="0" required inputmode="decimal" value="{{ old('cash_received', (string) $t) }}" class="mt-1 w-full rounded-2xl ring-1 ring-roast/20 px-4 py-3 text-3xl font-display font-extrabold text-right focus:outline-none focus:ring-2 focus:ring-saffron">
                             </label>
                             <div class="grid grid-cols-4 gap-1.5">
                                 @foreach ($quick as $amt)<button type="button" data-cash="{{ $amt }}" class="rounded-xl bg-crema ring-1 ring-roast/15 py-2 text-sm font-bold hover:bg-amber-50">{{ number_format($amt) }}</button>@endforeach
@@ -234,5 +234,6 @@
 @if (session('print_bill'))
     <script>window.addEventListener('load', function () { printBill(@json(session('print_bill'))); });</script>
 @endif
+@include('partials.touch')
 </body>
 </html>

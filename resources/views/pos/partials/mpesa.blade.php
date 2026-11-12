@@ -32,7 +32,7 @@
         <div class="text-xs font-bold uppercase tracking-wider text-roast/60 mb-2"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-green-600 text-white mr-1">1</span> Send a prompt to their phone</div>
         <form method="POST" action="{{ route('pos.tickets.mpesa.stk', $ticket) }}" class="flex gap-2">
             @csrf
-            <input name="phone" inputmode="tel" required placeholder="07xx xxx xxx" value="{{ old('phone') }}" {{ $kkReady ? '' : 'disabled' }}
+            <input name="phone" inputmode="tel" data-keypad="phone" data-keypad-label="Customer phone" maxlength="13" required placeholder="07xx xxx xxx" value="{{ old('phone') }}" {{ $kkReady ? '' : 'disabled' }}
                    class="flex-1 min-w-0 rounded-xl ring-1 ring-roast/20 px-3 py-3 text-lg tracking-wide focus:outline-none focus:ring-2 focus:ring-green-600">
             <button {{ $kkReady ? '' : 'disabled' }} class="shrink-0 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold px-4 disabled:opacity-40">Send<span class="block text-xs font-medium opacity-90">KSh {{ number_format($billKsh) }}</span></button>
         </form>

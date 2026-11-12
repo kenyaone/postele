@@ -19,7 +19,7 @@
         <form method="POST" action="{{ route('pos.shift.open') }}">
             @csrf
             <label class="block text-sm font-medium text-gray-700 mb-1">Cash in till at opening (KSh)</label>
-            <input type="number" name="cash_opening" step="0.01" min="0" required autofocus
+            <input type="number" name="cash_opening" data-keypad="money" data-keypad-label="Cash in till" step="0.01" min="0" required autofocus
                    value="{{ old('cash_opening', '0') }}"
                    class="w-full border rounded-lg px-3 py-2 mb-6 text-2xl text-right focus:ring-2 focus:ring-emerald-500">
 
@@ -33,5 +33,6 @@
             <button class="text-red-600 text-sm hover:underline">Logout</button>
         </form>
     </div>
+@include('partials.touch')
 </body>
 </html>

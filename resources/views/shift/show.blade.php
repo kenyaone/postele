@@ -110,7 +110,7 @@
                           onsubmit="return confirm('Close shift? Z-report will print, no more sales on this shift.');">
                         @csrf
                         <label class="text-sm font-medium">Count the cash in the till. Declare:</label>
-                        <input type="number" name="cash_declared" step="0.01" min="0" required
+                        <input type="number" name="cash_declared" data-keypad="money" data-keypad-label="Cash counted" step="0.01" min="0" required
                                value="{{ old('cash_declared', number_format($report['cashExpected'], 2, '.', '')) }}"
                                class="w-full border rounded px-3 py-2 text-2xl text-right">
                         <button class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold rounded py-3">
@@ -127,5 +127,6 @@
             @endif
         </div>
     </div>
+@include('partials.touch')
 </body>
 </html>

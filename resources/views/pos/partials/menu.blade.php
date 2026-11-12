@@ -29,7 +29,7 @@
 <div class="sticky top-0 z-10 -mx-1 px-1 pt-1 pb-3 bg-crema/95 backdrop-blur">
     <div class="relative">
         <span class="absolute left-4 top-1/2 -translate-y-1/2 text-roast/50 pointer-events-none">&#128269;</span>
-        <input id="menu-search" type="search" autocomplete="off" placeholder="Search dishes...  (press / )"
+        <input id="menu-search" type="search" autocomplete="off" placeholder="Search dishes..."
                class="w-full rounded-2xl bg-white pl-11 pr-4 py-3 text-base shadow-sm ring-1 ring-roast/15 focus:outline-none focus:ring-2 focus:ring-saffron">
     </div>
     <div id="cat-chips" class="flex gap-2 overflow-x-auto mt-3 pb-1">
@@ -65,11 +65,11 @@
                         <button type="submit" {{ $canAdd ? '' : 'disabled' }}
                                 class="tile relative w-full h-full min-h-[96px] text-left rounded-2xl bg-white shadow-sm ring-1 ring-roast/10 hover:ring-2 hover:ring-saffron hover:shadow-md overflow-hidden pl-4 pr-3 py-3 disabled:opacity-50 disabled:cursor-not-allowed">
                             <span class="absolute left-0 inset-y-0 w-1.5 {{ $pc['band'] }}"></span>
-                            <span class="flex items-start justify-between gap-2">
+                            <span class="tile-top flex items-start justify-between gap-2">
                                 <span class="text-2xl leading-none">{!! $ic !!}</span>
-                                @if ($inTicket)<span class="pop min-w-[1.75rem] h-7 px-2 rounded-full bg-espresso text-crema text-sm font-bold grid place-items-center" title="Already on this order">{{ $inTicket }}</span>@endif
+                                @if ($inTicket)<span class="qty-badge pop min-w-[1.75rem] h-7 px-2 rounded-full bg-espresso text-crema text-sm font-bold grid place-items-center" title="Already on this order">{{ $inTicket }}</span>@endif
                             </span>
-                            <span class="block font-semibold leading-snug mt-2">{{ $item->name }}</span>
+                            <span class="tile-name block font-semibold leading-snug mt-2">{{ $item->name }}</span>
                             <span class="block text-sm font-bold text-roast mt-0.5">KSh {{ number_format((float) $item->price) }}</span>
                         </button>
                     </form>
@@ -137,7 +137,34 @@
     });
 
     function saveScroll() { try { sessionStorage.setItem('pos-scroll', JSON.stringify({ c: col ? col.scrollTop : 0, w: window.scrollY })); } catch (e) {} }
-    document.querySelectorAll('.menu-item').forEach(function (f) { f.addEventListener('submit', saveScroll); });
+    var queue = [], busy = false, reloadT = null, toastT = null, toast = document.createElement('div');
+    toast.className = 'fixed left-1/2 -translate-x-1/2 bottom-24 lg:bottom-6 z-40 rounded-full bg-espresso text-crema px-5 py-2.5 text-sm font-semibold shadow-xl transition-opacity duration-200 opacity-0 pointer-events-none';
+    document.body.appendChild(toast);
+    function say(msg) { toast.textContent = msg; toast.style.opacity = '1'; clearTimeout(toastT); toastT = setTimeout(function () { toast.style.opacity = '0'; }, 1200); }
+    function bump(f) {
+        var top = f.querySelector('.tile-top'), b = f.querySelector('.qty-badge');
+        if (!b && top) { b = document.createElement('span'); b.className = 'qty-badge pop min-w-[1.75rem] h-7 px-2 rounded-full bg-espresso text-crema text-sm font-bold grid place-items-center'; b.textContent = '0'; top.appendChild(b); }
+        if (b) { b.textContent = String((parseInt(b.textContent, 10) || 0) + 1); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+        say('+1  ' + ((f.querySelector('.tile-name') || {}).textContent || 'item').trim());
+    }
+    function pump(action) {
+        if (busy) return;
+        var fd = queue.shift();
+        if (!fd) { clearTimeout(reloadT); reloadT = setTimeout(function () { saveScroll(); location.reload(); }, 700); return; }
+        busy = true; clearTimeout(reloadT);
+        fetch(action, { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { busy = false; if (!r.ok) { saveScroll(); location.reload(); return; } pump(action); })
+            .catch(function () { busy = false; saveScroll(); location.reload(); });
+    }
+    document.querySelectorAll('.menu-item').forEach(function (f) {
+        f.addEventListener('submit', function (e) {
+            if (!window.fetch || !window.FormData) { saveScroll(); return; }
+            e.preventDefault();
+            var btn = f.querySelector('button');
+            if (btn && btn.disabled) return;
+            bump(f); queue.push(new FormData(f)); pump(f.action);
+        });
+    });
     try {
         var s = JSON.parse(sessionStorage.getItem('pos-scroll') || 'null');
         if (s) { if (col) col.scrollTop = s.c; window.scrollTo(0, s.w); sessionStorage.removeItem('pos-scroll'); }

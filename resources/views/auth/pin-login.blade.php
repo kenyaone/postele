@@ -28,7 +28,7 @@
             </select>
 
             <label id="secret-label" class="block text-sm font-medium text-gray-700 mb-1">PIN</label>
-            <input type="password" name="secret" id="secret" autocomplete="off" autofocus required
+            <input type="password" name="secret" id="secret" data-keypad="pin" data-keypad-label="PIN" data-keypad-text="1" autocomplete="off" autofocus required
                    class="w-full border rounded-lg px-3 py-2 mb-6 text-center text-2xl tracking-widest focus:outline-none focus:ring-2 focus:ring-emerald-500">
 
             <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg py-3">Sign in</button>
@@ -49,5 +49,6 @@
             sync();
         })();
     </script>
+@include('partials.touch')
 </body>
 </html>
