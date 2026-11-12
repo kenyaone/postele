@@ -314,7 +314,7 @@ class PosController extends Controller
     {
         $q = trim((string) $request->query('no', ''));
         $t = $q === '' ? null : Ticket::findByOrderNo($q);
-        if (! $t) return back()->with('error', 'No order ' . ($q ?: '') . ' found. Type the date and number, e.g. ' . now()->format('d-m-Y') . '-007, or just 7 for today.');
+        if (! $t) return back()->withErrors(['no' => 'No order ' . ($q ?: '') . ' found. Type the date and number, e.g. ' . now()->format('d-m-Y') . '-007, or just 7 for today.']);
         return redirect()->route('pos.tickets.show', $t);
     }
 }
