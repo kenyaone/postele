@@ -89,7 +89,7 @@
         <table class="w-full text-sm mb-4">
             @forelse ($suppliers as $s)
                 <tr class="border-b last:border-0 {{ $s->active ? '' : 'text-gray-400' }}">
-                    <td class="py-1"><a href="{{ route('manage.procurement.supplier', $s) }}" class="hover:underline">{{ $s->name }}</a></td>
+                    <td class="py-1"><a href="{{ route('manage.procurement.supplier', $s) }}" class="hover:underline">{{ $s->name }}</a> @if ($s->category)<span class="text-xs text-gray-400">{{ $s->category }}</span>@endif</td>
                     <td class="py-1 text-right text-xs {{ $s->owed > 0 ? 'text-red-700 font-semibold' : 'text-gray-400' }}">{{ $s->owed > 0 ? 'owe ' . $ksh($s->owed) : 'settled' }}</td>
                 </tr>
             @empty

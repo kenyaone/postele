@@ -7,8 +7,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Supplier extends Model
 {
-    protected $fillable = ['name', 'phone', 'notes', 'active'];
+    protected $fillable = ['name', 'contact', 'phone', 'category', 'terms', 'notes', 'active'];
     protected $casts = ['active' => 'boolean'];
+
+    public const CATEGORIES = ['Produce', 'Dry Goods', 'Meat & Fish', 'Dairy', 'Beverages', 'Packaging'];
 
     public function purchases(): HasMany
     {

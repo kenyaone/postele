@@ -32,7 +32,14 @@
         @csrf @method('PATCH')
         <h2 class="font-semibold">Supplier details</h2>
         <div><label class="block text-xs text-gray-500">Name</label><input name="name" required maxlength="80" value="{{ old('name', $supplier->name) }}" class="w-full border rounded px-2 py-1"></div>
+        <div><label class="block text-xs text-gray-500">Contact person</label><input name="contact" maxlength="60" value="{{ old('contact', $supplier->contact) }}" class="w-full border rounded px-2 py-1"></div>
         <div><label class="block text-xs text-gray-500">Phone</label><input name="phone" maxlength="30" value="{{ old('phone', $supplier->phone) }}" class="w-full border rounded px-2 py-1"></div>
+        <div class="grid grid-cols-2 gap-2">
+            <div><label class="block text-xs text-gray-500">Category</label><input name="category" list="supplier-cats" maxlength="40" value="{{ old('category', $supplier->category) }}" class="w-full border rounded px-2 py-1"></div>
+            <div><label class="block text-xs text-gray-500">Terms</label><input name="terms" list="supplier-terms" maxlength="30" value="{{ old('terms', $supplier->terms) }}" placeholder="e.g. COD" class="w-full border rounded px-2 py-1"></div>
+        </div>
+        <datalist id="supplier-cats">@foreach (\App\Models\Supplier::CATEGORIES as $c)<option value="{{ $c }}">@endforeach</datalist>
+        <datalist id="supplier-terms"><option value="COD"><option value="7 days"><option value="14 days"><option value="30 days"></datalist>
         <div><label class="block text-xs text-gray-500">Notes</label><input name="notes" maxlength="200" value="{{ old('notes', $supplier->notes) }}" placeholder="e.g. delivers Tue/Fri" class="w-full border rounded px-2 py-1"></div>
         <label class="flex items-center gap-2 text-sm"><input type="hidden" name="active" value="0"><input type="checkbox" name="active" value="1" {{ $supplier->active ? 'checked' : '' }}> Active supplier</label>
         <button class="w-full bg-gray-800 text-white rounded py-2">Save</button>

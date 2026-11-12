@@ -152,6 +152,9 @@ class ProcurementController extends Controller
             'name'   => ['required', 'string', 'max:80', Rule::unique('suppliers', 'name')->ignore($supplier->id)],
             'phone'  => 'nullable|string|max:30',
             'notes'  => 'nullable|string|max:200',
+            'contact'  => 'nullable|string|max:60',
+            'category' => 'nullable|string|max:40',
+            'terms'    => 'nullable|string|max:30',
             'active' => 'nullable|boolean',
         ]);
         $supplier->update($data + ['active' => (bool) ($data['active'] ?? false)]);
