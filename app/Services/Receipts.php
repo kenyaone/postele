@@ -35,24 +35,41 @@ class Receipts
         return $e->size(1, 1)->bold(false)->feed(4)->cut()->get();
     }
 
+    public function buildBill(Ticket $ticket): string
+    {
+        return $this->buildInvoice($ticket, null);
+    }
+
     public function buildReceipt(Ticket $ticket, Payment $payment): string
+    {
+        return $this->buildInvoice($ticket, $payment);
+    }
+
+    private function buildInvoice(Ticket $ticket, ?Payment $payment): string
     {
         $cafe  = config('pos.cafe_name');
         $till  = config('pos.till_number');
         $phone = config('pos.phone');
         $wa    = config('pos.thank_you_wa');
+        $isBill = $payment === null;
 
         $e = (new EscPos())->init()
             ->align('center')->bold(true)->size(2, 2)
             ->line($cafe)
             ->size(1, 1)->bold(false)
             ->line("Till $till  \u{00B7}  $phone")
-            ->line(str_repeat('-', self::WIDTH))
-            ->align('left')
-            ->line('Ticket #' . str_pad((string) $ticket->id, 5, '0', STR_PAD_LEFT))
-            ->line($ticket->opened_at?->format('d M Y H:i') ?? '')
-            ->line('Cashier: ' . ($ticket->opener->name ?? '?'))
             ->line(str_repeat('-', self::WIDTH));
+
+        if ($isBill) {
+            $e->bold(true)->line("BILL \u{2014} PLEASE PAY")->bold(false);
+            $e->line(str_repeat('-', self::WIDTH));
+        }
+
+        $e->align('left')
+          ->line('Ticket #' . str_pad((string) $ticket->id, 5, '0', STR_PAD_LEFT))
+          ->line($ticket->opened_at?->format('d M Y H:i') ?? '')
+          ->line('Cashier: ' . ($ticket->opener->name ?? '?'))
+          ->line(str_repeat('-', self::WIDTH));
 
         $total = 0.0;
         foreach ($ticket->items as $line) {
@@ -73,21 +90,30 @@ class Receipts
           ->line('TOTAL' . str_repeat(' ', max(1, $pad)) . $totalStr)
           ->size(1, 1)->bold(false);
 
-        $methodLabel = match ($payment->method) {
-            'cash'           => 'Cash',
-            'kk_stk'         => 'M-Pesa STK',
-            'kk_till_auto',
-            'kk_till_manual' => 'M-Pesa Till',
-            default          => $payment->method,
-        };
-        $ref = $payment->kk_reference ? ' (' . $payment->kk_reference . ')' : '';
-        $e->line('Paid: ' . $methodLabel . $ref);
+        if (! $isBill) {
+            $methodLabel = match ($payment->method) {
+                'cash'           => 'Cash',
+                'kk_stk'         => 'M-Pesa STK',
+                'kk_till_auto',
+                'kk_till_manual' => 'M-Pesa Till',
+                default          => $payment->method,
+            };
+            $ref = $payment->kk_reference ? ' (' . $payment->kk_reference . ')' : '';
+            $e->line('Paid: ' . $methodLabel . $ref);
+        }
 
-        return $e->line(str_repeat('-', self::WIDTH))
-            ->align('center')
-            ->line('Thank you! Order again:')
-            ->line($wa)
-            ->feed(4)->cut()->get();
+        $e->line(str_repeat('-', self::WIDTH))->align('center');
+
+        if ($isBill) {
+            $e->line('Pay at the counter.')
+              ->line('M-Pesa Till ' . $till)
+              ->line('(Not a receipt)');
+        } else {
+            $e->line('Thank you! Order again:')
+              ->line($wa);
+        }
+
+        return $e->feed(4)->cut()->get();
     }
 
     public function buildShiftReport(Shift $shift, array $d, bool $isZ): string

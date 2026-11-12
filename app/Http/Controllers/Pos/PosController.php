@@ -133,6 +133,25 @@ class PosController extends Controller
         return redirect()->route('pos.tickets.show', $ticket)->with('ok', "Sent to kitchen \u{2014} KOT queued.");
     }
 
+    public function printBill(Request $request, Ticket $ticket, Receipts $receipts)
+    {
+        $this->authorizeTicket($request, $ticket);
+        abort_unless(in_array($ticket->status, ['open', 'sent'], true), 403, 'Ticket already closed.');
+
+        if ($ticket->items()->count() === 0) {
+            return back()->withErrors(['bill' => 'Ticket is empty.']);
+        }
+
+        $ticket->load('items.item', 'opener');
+        PrintJob::create([
+            'printer'       => 'cashier',
+            'payload_bytes' => $receipts->buildBill($ticket),
+            'status'        => 'pending',
+        ]);
+
+        return back()->with('ok', 'Bill queued to cashier printer.');
+    }
+
     public function closeBill(Request $request, Ticket $ticket, Receipts $receipts)
     {
         $this->authorizeTicket($request, $ticket);
