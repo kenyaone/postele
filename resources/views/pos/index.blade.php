@@ -167,7 +167,32 @@
                             <button class="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-lg py-4 shadow-md">&#128181; Close bill (cash)</button>
                         </form>
                     </div>
-                    <form method="POST" action="{{ route('pos.tickets.void', $ticket) }}" onsubmit="return confirm('Cancel this whole order?');" class="mt-3 text-center">@csrf<button class="text-xs text-red-600 hover:underline">Cancel order</button></form>
+                    <div class="mt-3 text-center"><button type="button" onclick="document.getElementById('void-modal').classList.remove('hidden')" class="text-xs text-red-600 hover:underline">Cancel order&hellip;</button></div>
+                    <div id="void-modal" class="{{ session('void_open') || $errors->has('manager_pin') || $errors->has('reason') ? '' : 'hidden' }} fixed inset-0 z-40 bg-black/50 flex items-end sm:items-center justify-center p-3">
+                        <form method="POST" action="{{ route('pos.tickets.void', $ticket) }}" class="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl space-y-4">
+                            @csrf
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-display text-xl font-extrabold">Cancel order #{{ $no }}?</h3>
+                                <button type="button" onclick="document.getElementById('void-modal').classList.add('hidden')" class="w-11 h-11 rounded-full hover:bg-crema text-2xl" title="Close">&times;</button>
+                            </div>
+                            <p class="text-sm text-roast/70">The kitchen already has this order. A <b>CANCELLED</b> slip will print so they stop.</p>
+                            <div>
+                                <div class="text-xs font-bold uppercase tracking-wider text-roast/60 mb-2">Why?</div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    @foreach (['Customer left', 'Wrong order', 'Duplicate order', 'Kitchen cannot make it', 'Customer changed mind', 'Other'] as $why)
+                                        <label class="cursor-pointer"><input type="radio" name="reason" value="{{ $why }}" class="peer sr-only" required @checked(old('reason') === $why)><span class="block rounded-xl ring-1 ring-roast/20 px-3 py-3 text-sm font-semibold text-center peer-checked:bg-espresso peer-checked:text-crema peer-checked:ring-espresso">{{ $why }}</span></label>
+                                    @endforeach
+                                </div>
+                                <input name="reason_note" maxlength="150" value="{{ old('reason_note') }}" placeholder="Details (optional)" class="mt-2 w-full rounded-xl ring-1 ring-roast/20 px-3 py-2.5 text-sm">
+                            </div>
+                            @if ($me->role !== 'manager')
+                                <label class="block"><span class="text-xs font-bold uppercase tracking-wider text-roast/60">Manager PIN</span>
+                                    <input type="password" name="manager_pin" inputmode="numeric" autocomplete="off" maxlength="10" required data-keypad="pin" data-keypad-label="Manager PIN" class="mt-1 w-full rounded-xl ring-1 ring-roast/20 px-4 py-3 text-2xl tracking-widest text-center">
+                                </label>
+                            @endif
+                            <button class="w-full rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-lg py-4">Cancel order</button>
+                        </form>
+                    </div>
                 @elseif ($ticket->status === 'paid')
                     @php $pay = $ticket->payments()->latest('id')->first(); @endphp
                     <div class="pop rounded-2xl bg-emerald-600 text-white p-5 text-center mb-3 shadow-lg">

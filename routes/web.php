@@ -42,7 +42,7 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
     Route::post('/tickets/{ticket}/send',                [PosController::class, 'sendToKitchen'])->name('tickets.send');
     Route::get('/tickets/{ticket}/bill',                 [PosController::class, 'printBill'])->name('tickets.bill');
     Route::post('/tickets/{ticket}/close',               [PosController::class, 'closeBill'])->name('tickets.close');
-    Route::post('/tickets/{ticket}/void',                [PosController::class, 'voidTicket'])->name('tickets.void');
+    Route::post('/tickets/{ticket}/void',                [PosController::class, 'voidTicket'])->middleware('throttle:10,1')->name('tickets.void');
     Route::post('/tickets/{ticket}/mpesa/stk',    [MpesaController::class, 'stk'])->middleware('throttle:6,1')->name('tickets.mpesa.stk');
     Route::get('/tickets/{ticket}/mpesa/status',  [MpesaController::class, 'stkStatus'])->name('tickets.mpesa.status');
     Route::post('/tickets/{ticket}/mpesa/match',  [MpesaController::class, 'match'])->name('tickets.mpesa.match');
@@ -56,6 +56,7 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
 
 Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->group(function () {
     Route::get('/mpesa', [\App\Http\Controllers\Manage\MpesaLogController::class, 'index'])->name('mpesa');
+    Route::get('/voids', [\App\Http\Controllers\Manage\VoidsController::class, 'index'])->name('voids');
     Route::get('/', [DashboardController::class, 'index'])->name('index');
     Route::get('/menu', [MenuController::class, 'index'])->name('menu');
     Route::get('/settings',   [SettingsController::class, 'edit'])->name('settings');

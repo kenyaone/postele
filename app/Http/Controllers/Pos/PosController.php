@@ -143,8 +143,10 @@ class PosController extends Controller
     {
         $this->authorizeTicket($request, $ticket);
         $mode = (string) $request->query('mode', 'bill');
-        abort_unless(in_array($mode, ['kot', 'both', 'bill', 'receipt'], true), 404);
-        if ($mode === 'receipt') {
+        abort_unless(in_array($mode, ['kot', 'both', 'bill', 'receipt', 'cancel'], true), 404);
+        if ($mode === 'cancel') {
+            abort_unless($ticket->status === 'void', 403, 'Order is not cancelled.');
+        } elseif ($mode === 'receipt') {
             abort_unless($ticket->status === 'paid', 403, 'Ticket is not paid yet.');
         } else {
             abort_unless(in_array($ticket->status, ['open', 'sent'], true), 403, 'Ticket already closed.');
@@ -197,12 +199,53 @@ class PosController extends Controller
         return redirect()->route('pos.tickets.show', $ticket)->with('change', $change);
     }
 
+    /** Cancel an order. Before the kitchen: the waiter's own call. After: reason + manager approval, and a CANCELLED slip prints. */
     public function voidTicket(Request $request, Ticket $ticket)
     {
         $this->authorizeTicket($request, $ticket);
-        abort_unless(in_array($ticket->status, ['open', 'sent'], true), 403);
-        $ticket->update(['status' => 'void', 'closed_at' => now()]);
-        return redirect()->route('pos.index')->with('ok', 'Ticket #' . $ticket->id . ' voided.');
+        abort_unless(in_array($ticket->status, ['open', 'sent'], true), 403, 'This order can no longer be cancelled.');
+        $user = $request->user();
+        $sent = $ticket->status === 'sent';
+
+        $data = $request->validate([
+            'reason'      => [$sent ? 'required' : 'nullable', 'string', 'max:100'],
+            'reason_note' => ['nullable', 'string', 'max:150'],
+            'manager_pin' => ['nullable', 'string', 'max:20'],
+        ], ['reason.required' => 'Choose why the order is being cancelled.']);
+
+        $approver = null;
+        if ($sent) {
+            if ($user->role === 'manager') {
+                $approver = $user;
+            } else {
+                $pin = (string) ($data['manager_pin'] ?? '');
+                if ($pin !== '') {
+                    $approver = \App\Models\User::where('role', 'manager')->where('active', true)->whereNotNull('pin_hash')->get()
+                        ->first(fn ($m) => \Illuminate\Support\Facades\Hash::check($pin, $m->pin_hash));
+                }
+                if (! $approver) {
+                    return back()->withErrors(['manager_pin' => 'A manager PIN is needed to cancel an order the kitchen already has.'])
+                        ->withInput($request->except('manager_pin'))->with('void_open', true);
+                }
+            }
+        }
+
+        $reason = trim(($data['reason'] ?? '') . (! empty($data['reason_note']) ? ': ' . $data['reason_note'] : ''));
+        $fields = ['status' => 'void', 'closed_at' => now()];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('tickets', 'void_reason')) {
+            $fields += [
+                'void_reason'      => $reason !== '' ? $reason : 'Cancelled before it went to the kitchen',
+                'voided_by'        => $user->id,
+                'void_approved_by' => $approver?->id,
+            ];
+        }
+        $ticket->update($fields);
+
+        $done = redirect()->route('pos.index')->with('ok', 'Order #' . str_pad($ticket->id, 5, '0', STR_PAD_LEFT) . ' cancelled.');
+        if ($sent) {
+            $done->with('print_bill', route('pos.tickets.bill', [$ticket, 'mode' => 'cancel']));
+        }
+        return $done;
     }
 
     private function menu()

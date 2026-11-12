@@ -2,7 +2,7 @@
     // $mode: kot (kitchen only) | both (kitchen + bill) | bill | receipt
     $no = str_pad($ticket->id, 5, '0', STR_PAD_LEFT);
     $methods = ['cash' => 'Cash', 'kk_stk' => 'M-Pesa', 'kk_till_auto' => 'M-Pesa Till', 'kk_till_manual' => 'M-Pesa Till'];
-    $title = ['kot' => 'Kitchen', 'both' => 'Kitchen + bill', 'bill' => 'Bill', 'receipt' => 'Receipt'][$mode] ?? 'Bill';
+    $title = ['kot' => 'Kitchen', 'both' => 'Kitchen + bill', 'bill' => 'Bill', 'receipt' => 'Receipt', 'cancel' => 'Cancelled'][$mode] ?? 'Bill';
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -30,6 +30,23 @@
     </style>
 </head>
 <body>
+@if ($mode === 'cancel')
+    <section class="slip">
+        <div class="c b big">*** CANCELLED ***</div>
+        <div class="c b big">Ticket #{{ $no }}</div>
+        <div class="c">{{ now()->format('d M H:i') }} &middot; {{ $ticket->opener->name ?? '?' }}</div>
+        <hr>
+        <div class="c b">DO NOT PREPARE</div>
+        <hr>
+        <table class="kot">
+            @foreach ($ticket->items as $line)
+                <tr><td style="width: 3.2em">{{ $line->qty }} x</td><td>{{ $line->item->name }}</td></tr>
+            @endforeach
+        </table>
+        @if ($ticket->void_reason)<hr><div>Reason: {{ $ticket->void_reason }}</div>@endif
+    </section>
+@endif
+
 @if (in_array($mode, ['kot', 'both'], true))
     <section class="slip">
         <div class="c b big">*** KITCHEN ***</div>
@@ -45,7 +62,7 @@
     </section>
 @endif
 
-@if ($mode !== 'kot')
+@if (! in_array($mode, ['kot', 'cancel'], true))
     <section class="slip">
         <div class="c b big">{{ config('pos.cafe_name') }}</div>
         <div class="c">Till {{ config('pos.till_number') }} &middot; {{ config('pos.phone') }}</div>
