@@ -37,7 +37,7 @@ class KopoKopoController extends Controller
         if ($topic !== 'buygoods_transaction_received') $status = 'ignored';
         elseif ($ref && Payment::where('kk_reference', $ref)->exists()) $status = 'matched';   // already paid via STK
 
-        KkEvent::create([
+        $tillEvent = KkEvent::create([
             'raw_payload' => $p,
             'event_type'  => $topic,
             'amount'      => $res['amount'] ?? null,
@@ -45,6 +45,11 @@ class KopoKopoController extends Controller
             'received_at' => isset($res['origination_time']) ? Carbon::parse($res['origination_time'])->setTimezone(config('app.timezone')) : now(),
             'status'      => $status,
         ]);
+
+        // Paid the till directly: link it to the one unpaid order with the same amount, if there is exactly one.
+        if ($status === 'pending') {
+            try { app(\App\Services\TillAutoMatcher::class)->match($tillEvent); } catch (\Throwable $e) { report($e); }
+        }
 
         return response()->json(['ok' => true]);
     }
