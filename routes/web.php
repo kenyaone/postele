@@ -55,6 +55,7 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
 });
 
 Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->group(function () {
+    Route::get('/mpesa', [\App\Http\Controllers\Manage\MpesaLogController::class, 'index'])->name('mpesa');
     Route::get('/', [DashboardController::class, 'index'])->name('index');
     Route::get('/menu', [MenuController::class, 'index'])->name('menu');
     Route::get('/settings',   [SettingsController::class, 'edit'])->name('settings');
