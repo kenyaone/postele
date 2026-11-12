@@ -47,6 +47,21 @@
                        class="w-full border rounded px-3 py-2">
             </div>
 
+            <div class="border-t pt-4 mt-2">
+                <h2 class="font-semibold mb-1">Manager login security</h2>
+                <p class="text-sm text-gray-500 mb-3">When on, managers get a 6-digit code on WhatsApp after their PIN (once per device every 30 days). Cashiers and waiters are not affected.</p>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Your WhatsApp number</label>
+                <input name="whatsapp_phone" inputmode="tel" value="{{ old('whatsapp_phone', $myWhatsapp) }}" placeholder="e.g. 0712 345 678"
+                       class="w-full border rounded px-3 py-2 mb-3">
+                <label class="flex items-center gap-2 text-sm {{ $otpReady ? '' : 'text-gray-400' }}">
+                    <input type="hidden" name="otp_enabled" value="0">
+                    <input type="checkbox" name="otp_enabled" value="1" {{ old('otp_enabled', $otpEnabled) ? 'checked' : '' }} {{ $otpReady ? '' : 'disabled' }}>
+                    Require a WhatsApp code for manager logins
+                </label>
+                @unless ($otpReady)
+                    <p class="text-xs text-amber-700 mt-1">Not available yet: the Africa&rsquo;s Talking WhatsApp details still need to be added to the server&rsquo;s .env file.</p>
+                @endunless
+            </div>
             <button class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded py-3">Save settings</button>
         </form>
     </div>

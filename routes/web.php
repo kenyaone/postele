@@ -19,7 +19,10 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/login',   [PinLoginController::class, 'show'])->name('login');
-Route::post('/login',  [PinLoginController::class, 'store'])->name('login.store');
+Route::post('/login',  [PinLoginController::class, 'store'])->middleware('throttle:10,1')->name('login.store');
+Route::get('/login/otp',          [PinLoginController::class, 'showOtp'])->name('login.otp');
+Route::post('/login/otp',         [PinLoginController::class, 'verifyOtp'])->middleware('throttle:10,1')->name('login.otp.verify');
+Route::post('/login/otp/resend',  [PinLoginController::class, 'resendOtp'])->middleware('throttle:3,1')->name('login.otp.resend');
 Route::post('/logout', [PinLoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
 Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name('pos.')->group(function () {
