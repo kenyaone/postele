@@ -1,27 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Menu &mdash; Tele Caf&eacute;</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 p-6">
-    <div class="max-w-6xl mx-auto">
+@extends('layouts.manage')
+@section('title', 'Menu')
 
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <a href="{{ route('manage.index') }}" class="text-sm text-gray-500 hover:underline">&larr; Manage</a>
-                <h1 class="text-2xl font-bold">Menu</h1>
-            </div>
-            <div class="text-right text-sm">
-                <div>{{ auth()->user()->name }} <span class="text-gray-500">({{ auth()->user()->role }})</span></div>
-                <form method="POST" action="{{ route('logout') }}">@csrf
-                    <button class="text-red-600 hover:underline">Logout</button>
-                </form>
-            </div>
-        </div>
-
-        @include('manage.partials.flash')
+@section('content')
+<div class="">
 
         {{-- CATEGORIES --}}
         {{-- Row inputs join their row's update form via the HTML5 form="" attribute; forms cannot wrap table cells. --}}
@@ -199,6 +180,5 @@
                 </form>
             </div>
         </section>
-    </div>
-</body>
-</html>
+</div>
+@endsection

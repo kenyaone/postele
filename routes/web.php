@@ -2,8 +2,11 @@
 
 use App\Http\Controllers\Auth\PinLoginController;
 use App\Http\Controllers\Manage\CategoryController;
+use App\Http\Controllers\Manage\DashboardController;
+use App\Http\Controllers\Manage\ExpenseController;
 use App\Http\Controllers\Manage\ItemController;
 use App\Http\Controllers\Manage\MenuController;
+use App\Http\Controllers\Manage\ReportController;
 use App\Http\Controllers\Manage\SettingsController;
 use App\Http\Controllers\Pos\PosController;
 use App\Http\Controllers\Pos\ShiftController;
@@ -43,10 +46,18 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
 });
 
 Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->group(function () {
-    Route::get('/', fn () => view('manage.index'))->name('index');
+    Route::get('/', [DashboardController::class, 'index'])->name('index');
     Route::get('/menu', [MenuController::class, 'index'])->name('menu');
     Route::get('/settings',   [SettingsController::class, 'edit'])->name('settings');
     Route::patch('/settings', [SettingsController::class, 'update'])->name('settings.update');
+
+    Route::get('/expenses',                 [ExpenseController::class, 'index'])->name('expenses.index');
+    Route::post('/expenses',                [ExpenseController::class, 'store'])->name('expenses.store');
+    Route::get('/expenses/{expense}/edit',  [ExpenseController::class, 'edit'])->name('expenses.edit');
+    Route::patch('/expenses/{expense}',     [ExpenseController::class, 'update'])->name('expenses.update');
+    Route::delete('/expenses/{expense}',    [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports');
 
     Route::post('/categories',              [CategoryController::class, 'store'])->name('categories.store');
     Route::patch('/categories/{category}',  [CategoryController::class, 'update'])->name('categories.update');

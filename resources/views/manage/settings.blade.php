@@ -1,26 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Settings &mdash; {{ config('pos.cafe_name') }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 p-6">
-    <div class="max-w-xl mx-auto">
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <a href="{{ route('manage.index') }}" class="text-sm text-gray-500 hover:underline">&larr; Manage</a>
-                <h1 class="text-2xl font-bold">Settings</h1>
-            </div>
-            <div class="text-right text-sm">
-                <div>{{ auth()->user()->name }} <span class="text-gray-500">({{ auth()->user()->role }})</span></div>
-                <form method="POST" action="{{ route('logout') }}">@csrf
-                    <button class="text-red-600 hover:underline">Logout</button>
-                </form>
-            </div>
-        </div>
+@extends('layouts.manage')
+@section('title', 'Settings')
 
-        @include('manage.partials.flash')
+@section('content')
+<div class="max-w-xl">
 
         <form method="POST" action="{{ route('manage.settings.update') }}" class="bg-white rounded-xl shadow p-6 space-y-4">
             @csrf @method('PATCH')
@@ -64,6 +46,5 @@
             </div>
             <button class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded py-3">Save settings</button>
         </form>
-    </div>
-</body>
-</html>
+</div>
+@endsection
