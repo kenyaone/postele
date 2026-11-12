@@ -57,7 +57,7 @@ class Receipts
             ->align('center')->bold(true)->size(2, 2)
             ->line($cafe)
             ->size(1, 1)->bold(false)
-            ->line("Till $till  \u{00B7}  $phone")
+            ->line("Till $till" . ($phone ? "  \u{00B7}  $phone" : ""))
             ->line(str_repeat('-', self::WIDTH));
 
         if ($isBill) {
