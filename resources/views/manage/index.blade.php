@@ -16,8 +16,16 @@
                 </form>
             </div>
         </div>
-        <div class="bg-white rounded-xl shadow p-6">
-            <p class="text-gray-600">Manager dashboard &mdash; menu CRUD (Task #5), reports (Task #9), mobile view (Task #10) land here.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <a href="{{ route('manage.menu') }}" class="block bg-white rounded-xl shadow p-6 hover:shadow-lg transition">
+                <div class="text-lg font-semibold">Menu</div>
+                <div class="text-gray-500 text-sm">Categories, items, prices, stations</div>
+            </a>
+            <div class="bg-white rounded-xl shadow p-6 opacity-50">
+                <div class="text-lg font-semibold">Reports</div>
+                <div class="text-gray-500 text-sm">Coming in Task #9 (X/Z, shift close)</div>
+            </div>
         </div>
     </div>
 </body>
