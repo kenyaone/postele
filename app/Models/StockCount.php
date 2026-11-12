@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StockCount extends Model
 {
-    protected $fillable = ['stock_item_id', 'counted_on', 'quantity', 'counted_by'];
+    protected $fillable = ['stock_item_id', 'counted_on', 'opening', 'received', 'quantity', 'counted_by'];
 
     protected $casts = [
         'counted_on' => 'date',
+        'opening'    => 'decimal:2',
+        'received'   => 'decimal:2',
         'quantity'   => 'decimal:2',
     ];
 
