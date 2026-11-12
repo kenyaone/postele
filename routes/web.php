@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\PinLoginController;
 use App\Http\Controllers\Manage\CategoryController;
 use App\Http\Controllers\Manage\ItemController;
 use App\Http\Controllers\Manage\MenuController;
+use App\Http\Controllers\Manage\SettingsController;
 use App\Http\Controllers\Pos\PosController;
 use App\Http\Controllers\Pos\ShiftController;
 use Illuminate\Support\Facades\Auth;
@@ -41,6 +42,8 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
 Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->group(function () {
     Route::get('/', fn () => view('manage.index'))->name('index');
     Route::get('/menu', [MenuController::class, 'index'])->name('menu');
+    Route::get('/settings',   [SettingsController::class, 'edit'])->name('settings');
+    Route::patch('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
     Route::post('/categories',              [CategoryController::class, 'store'])->name('categories.store');
     Route::patch('/categories/{category}',  [CategoryController::class, 'update'])->name('categories.update');
