@@ -106,4 +106,5 @@ Route::middleware(['auth', 'role:stock,manager'])->prefix('stock')->name('stock.
     Route::get('/items',                [StockController::class, 'items'])->name('items');
     Route::post('/items',               [StockController::class, 'storeItem'])->name('items.store');
     Route::patch('/items/{stockItem}',  [StockController::class, 'updateItem'])->name('items.update');
+    Route::get('/shopping-list',         [StockController::class, 'printShopping'])->name('shopping.print');
 });

@@ -75,6 +75,7 @@
 
 @if ($toBuy->isNotEmpty())
     <div class="bg-white rounded shadow p-4 mt-6">
+        <a href="{{ route('stock.shopping.print') }}" target="_blank" class="float-right bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded px-3 py-1">&#128424;&nbsp; Print shopping list</a>
         <h2 class="font-semibold mb-2">Shopping list <span class="text-sm font-normal text-gray-500">(at or below reorder level)</span></h2>
         <table class="w-full text-sm">
             <thead class="text-gray-500 text-left"><tr><th class="py-1">Item</th><th class="py-1 text-right">Left</th><th class="py-1 text-right">Buy</th></tr></thead>

@@ -120,6 +120,29 @@ class StockController extends Controller
         return redirect()->route('stock.items')->with('ok', "\u{201C}{$stockItem->name}\u{201D} saved.");
     }
 
+    /** Printable shopping list for the market trip (80mm, auto-prints). */
+    public function printShopping(Request $request)
+    {
+        $date = $this->dateFor($request);
+        $d = $date->toDateString();
+        $items = StockItem::where('active', true)->orderBy('name')->get();
+        $latest = StockCount::whereNotNull('quantity')->where('counted_on', '<=', $d)
+            ->where('counted_on', '>=', $date->copy()->subDays(90)->toDateString())
+            ->orderBy('counted_on')->get()->keyBy('stock_item_id');
+        $toBuy = $items->map(function ($i) use ($latest) {
+            $c = $latest->get($i->id);
+            if (! $c || $i->reorder_level === null) return null;
+            $qty = (float) $c->quantity;
+            if ($qty > (float) $i->reorder_level) return null;
+            return (object) [
+                'item' => $i, 'qty' => $qty,
+                'suggest' => $i->par_level !== null ? max(0, (float) $i->par_level - $qty) : null,
+            ];
+        })->filter()->values();
+
+        return view('stock.shopping-print', ['toBuy' => $toBuy, 'by' => $request->user()->name]);
+    }
+
     private function itemData(Request $request, ?StockItem $item = null): array
     {
         $data = $request->validate([
