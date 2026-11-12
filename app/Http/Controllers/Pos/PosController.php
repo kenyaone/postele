@@ -239,7 +239,7 @@ class PosController extends Controller
         }
         $ticket->update($fields);
 
-        $done = redirect()->route('pos.index')->with('ok', 'Order #' . str_pad($ticket->id, 5, '0', STR_PAD_LEFT) . ' cancelled.');
+        $done = redirect()->route('pos.index')->with('ok', 'Order #' . $ticket->order_no . ' cancelled.');
         if ($sent) {
             $done->with('print_bill', route('pos.tickets.bill', [$ticket, 'mode' => 'cancel']));
         }
@@ -307,5 +307,14 @@ class PosController extends Controller
         $ticket->load('items.item', 'opener');
         $what === 'kot' ? $router->kot($ticket) : $router->cashier($receipts->buildBill($ticket), false, $ticket->id, 'bill');
         return $request->ajax() ? response()->json(['ok' => true]) : back()->with('ok', $what === 'kot' ? 'Kitchen ticket sent to the printer.' : 'Bill sent to the printer.');
+    }
+
+    /** Open any order by its number: 12-11-2026-007, or just 7 for today's. */
+    public function find(Request $request)
+    {
+        $q = trim((string) $request->query('no', ''));
+        $t = $q === '' ? null : Ticket::findByOrderNo($q);
+        if (! $t) return back()->with('error', 'No order ' . ($q ?: '') . ' found. Type the date and number, e.g. ' . now()->format('d-m-Y') . '-007, or just 7 for today.');
+        return redirect()->route('pos.tickets.show', $t);
     }
 }

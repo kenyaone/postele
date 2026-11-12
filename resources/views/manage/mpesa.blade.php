@@ -1,6 +1,6 @@
 @extends('layouts.manage')
 @section('title', 'M-Pesa payments')
-@php $no = fn ($t) => '#' . str_pad($t->id, 5, '0', STR_PAD_LEFT); @endphp
+@php $no = fn ($t) => '#' . $t->order_no; @endphp
 
 @section('content')
 <div class="flex flex-wrap items-center gap-2 mb-4 -mt-2">

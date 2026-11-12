@@ -1,7 +1,7 @@
 @extends('layouts.manage')
 @section('title', 'Order history')
 @php
-    $no = fn ($t) => '#' . str_pad($t->id, 5, '0', STR_PAD_LEFT);
+    $no = fn ($t) => '#' . $t->order_no;
     $pill = ['paid' => ['Paid', 'bg-emerald-100 text-emerald-800'], 'open' => ['Taking order', 'bg-sky-100 text-sky-800'], 'sent' => ['With kitchen', 'bg-amber-100 text-amber-900'], 'void' => ['Cancelled', 'bg-gray-200 text-gray-700']];
     $how = ['cash' => 'Cash', 'kk_stk' => 'M-Pesa', 'kk_till_auto' => 'M-Pesa', 'kk_till_manual' => 'M-Pesa', 'credit' => 'On account'];
 @endphp

@@ -82,7 +82,7 @@
 
 @if ($ticket && $ticket->items->isNotEmpty() && $ticket->status !== 'paid')
     <a href="#ticket-panel" class="lg:hidden fixed bottom-3 inset-x-3 z-20 rounded-2xl bg-espresso text-crema px-5 py-3.5 flex items-center justify-between font-semibold shadow-2xl">
-        <span class="flex items-center gap-2"><span class="bg-saffron text-espresso rounded-full min-w-[1.75rem] h-7 px-1 grid place-items-center text-sm font-extrabold">{{ $ticket->items->sum('qty') }}</span> View order #{{ str_pad($ticket->id, 5, '0', STR_PAD_LEFT) }}</span>
+        <span class="flex items-center gap-2"><span class="bg-saffron text-espresso rounded-full min-w-[1.75rem] h-7 px-1 grid place-items-center text-sm font-extrabold">{{ $ticket->items->sum('qty') }}</span> View order #{{ $ticket->order_no }}</span>
         <span class="font-display text-lg">KSh {{ number_format($ticket->total) }} &rarr;</span>
     </a>
     <div class="lg:hidden h-20"></div>

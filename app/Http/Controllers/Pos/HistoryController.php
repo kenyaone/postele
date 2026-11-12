@@ -30,7 +30,9 @@ class HistoryController extends Controller
         $waiter = $seeAll ? (int) $request->query('waiter', 0) : $user->id;
 
         $base = Ticket::query();
-        if ($q !== '' && ctype_digit(ltrim($q, '#0') ?: '0') && ltrim($q, '#0') !== '') {
+        if ($q !== '' && preg_match('/^#?\d{1,2}[-\/. ]\d{1,2}[-\/. ]\d{2,4}[-\/. ]\d{1,4}$/', $q)) {
+            $base->where('id', optional(\App\Models\Ticket::findByOrderNo($q))->id ?? 0);
+        } elseif ($q !== '' && ctype_digit(ltrim($q, '#0') ?: '0') && ltrim($q, '#0') !== '') {
             $base->where('id', (int) ltrim($q, '#0'));
         } elseif ($q !== '') {
             $base->whereHas('payments', fn ($p) => $p->where('kk_reference', 'like', '%' . strtoupper($q) . '%'));

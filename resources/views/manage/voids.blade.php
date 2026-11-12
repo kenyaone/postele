@@ -1,6 +1,6 @@
 @extends('layouts.manage')
 @section('title', 'Cancelled orders')
-@php $no = fn ($t) => '#' . str_pad($t->id, 5, '0', STR_PAD_LEFT); @endphp
+@php $no = fn ($t) => '#' . $t->order_no; @endphp
 
 @section('content')
 <form method="GET" action="{{ route('manage.voids') }}" class="flex flex-wrap items-center gap-2 mb-4 -mt-2">

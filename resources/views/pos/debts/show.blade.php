@@ -1,6 +1,6 @@
 @extends('layouts.manage')
 @section('title', $customer->name)
-@php $no = fn ($t) => '#' . str_pad($t->id, 5, '0', STR_PAD_LEFT); $ways = ['cash' => 'Cash', 'mpesa' => 'M-Pesa', 'bank' => 'Bank', 'other' => 'Other']; @endphp
+@php $no = fn ($t) => '#' . $t->order_no; $ways = ['cash' => 'Cash', 'mpesa' => 'M-Pesa', 'bank' => 'Bank', 'other' => 'Other']; @endphp
 
 @section('content')
 <a href="{{ route('pos.debts') }}" class="inline-block text-sm text-roast hover:underline mb-3 -mt-2">&larr; All debts</a>

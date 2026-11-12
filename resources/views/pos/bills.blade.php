@@ -3,7 +3,7 @@
 @php
     $methods = ['cash' => 'Cash', 'credit' => 'On account', 'kk_stk' => 'M-Pesa prompt', 'kk_till_auto' => 'M-Pesa till', 'kk_till_manual' => 'M-Pesa code typed'];
     $tones = ['ok' => 'bg-emerald-100 text-emerald-800', 'warn' => 'bg-amber-100 text-amber-900', 'plain' => 'bg-gray-100 text-gray-700'];
-    $no = fn ($t) => '#' . str_pad($t->id, 5, '0', STR_PAD_LEFT);
+    $no = fn ($t) => '#' . $t->order_no;
 @endphp
 
 @section('content')

@@ -16,7 +16,7 @@ class Receipts
             ->align('center')->bold(true)->size(2, 2)
             ->line('*** KITCHEN ***')
             ->size(1, 1)->bold(false)
-            ->line('Ticket #' . str_pad((string) $ticket->id, 5, '0', STR_PAD_LEFT))
+            ->line('Ticket #' . $ticket->order_no)
             ->line($ticket->opened_at?->format('d M Y H:i') ?? '')
             ->line('By: ' . ($ticket->opener->name ?? '?'))
             ->line(str_repeat('-', self::WIDTH))
@@ -66,7 +66,7 @@ class Receipts
         }
 
         $e->align('left')
-          ->line('Ticket #' . str_pad((string) $ticket->id, 5, '0', STR_PAD_LEFT))
+          ->line('Ticket #' . $ticket->order_no)
           ->line($ticket->opened_at?->format('d M Y H:i') ?? '')
           ->line('Cashier: ' . ($ticket->opener->name ?? '?'))
           ->line(str_repeat('-', self::WIDTH));

@@ -1,6 +1,6 @@
 @php
     $k = fn ($n) => 'KSh ' . number_format((float) $n);
-    $no = fn ($id) => '#' . str_pad($id, 4, '0', STR_PAD_LEFT);
+    $no = fn ($id) => '#' . \App\Models\Ticket::orderNoFor($id);
     $labels = ['cash' => 'Cash', 'mpesa' => 'M-Pesa', 'credit' => 'On account (credit)'];
     $td = 'padding:6px 10px;border-bottom:1px solid #eee;font-size:14px;';
     $h = 'margin:22px 0 6px;font-size:15px;color:#2b1b14;';
