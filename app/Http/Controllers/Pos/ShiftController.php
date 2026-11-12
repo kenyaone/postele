@@ -67,11 +67,7 @@ class ShiftController extends Controller
         $report  = $reports->compute($shift);
         $payload = $receipts->buildShiftReport($shift, $report, isZ: true);
 
-        PrintJob::create([
-            'printer'       => 'cashier',
-            'payload_bytes' => $payload,
-            'status'        => 'pending',
-        ]);
+        app(\App\Services\PrintRouter::class)->cashier($payload);
 
         return redirect()->route('pos.shift.show')->with('ok', 'Shift closed. Z-report queued to cashier printer.');
     }

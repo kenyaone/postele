@@ -28,11 +28,7 @@ class PaymentSettler
             ]);
             $t->update(['status' => 'paid', 'closed_at' => now()]);
 
-            PrintJob::create([
-                'printer'       => 'cashier',
-                'payload_bytes' => app(Receipts::class)->buildReceipt($t->fresh(['items.item', 'opener']), $payment),
-                'status'        => 'pending',
-            ]);
+            app(\App\Services\PrintRouter::class)->cashier(app(Receipts::class)->buildReceipt($t->fresh(['items.item', 'opener']), $payment), true);
             return $payment;
         });
     }

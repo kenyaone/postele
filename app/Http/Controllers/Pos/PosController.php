@@ -121,25 +121,23 @@ class PosController extends Controller
         }
 
         DB::transaction(function () use ($ticket, $receipts) {
+            $newLineIds = TicketItem::where('ticket_id', $ticket->id)->whereNull('sent_at')->pluck('id');
             TicketItem::where('ticket_id', $ticket->id)
                 ->whereNull('sent_at')
                 ->update(['sent_at' => now()]);
             $ticket->update(['status' => 'sent']);
 
             $ticket->load('items.item', 'opener');
-            PrintJob::create([
-                'printer'       => 'kitchen',
-                'payload_bytes' => $receipts->buildKot($ticket),
-                'status'        => 'pending',
-            ]);
+            app(\App\Services\PrintRouter::class)->kot($ticket, $newLineIds->isNotEmpty() ? $ticket->items->whereIn('id', $newLineIds)->values() : null);
         });
 
         // One counter printer: the POS page opens the print dialog on reload with the kitchen ticket
         // (and, for "Send + print bill", the bill straight after it in the same print job).
         $mode = $request->boolean('print_bill') ? 'both' : 'kot';
+        if ($mode === 'both' && app(\App\Services\PrintRouter::class)->hasNetwork('bill')) app(\App\Services\PrintRouter::class)->cashier($receipts->buildBill($ticket->fresh(['items.item', 'opener'])));
         return redirect()->route('pos.tickets.show', $ticket)
             ->with('ok', $mode === 'both' ? 'Sent to kitchen. Printing kitchen ticket and bill.' : 'Sent to kitchen. Printing kitchen ticket.')
-            ->with('print_bill', route('pos.tickets.bill', [$ticket, 'mode' => $mode]));
+            ->with('print_bill', ($bm = app(\App\Services\PrintRouter::class)->browserMode($mode)) ? route('pos.tickets.bill', [$ticket, 'mode' => $bm]) : null);
     }
 
     /** Browser-printed slips. mode: kot | both (kitchen ticket + bill) | bill | receipt (paid tickets). */
@@ -192,11 +190,7 @@ class PosController extends Controller
 
             $ticket->update(['status' => 'paid', 'closed_at' => now()]);
 
-            PrintJob::create([
-                'printer'       => 'cashier',
-                'payload_bytes' => $receipts->buildReceipt($ticket->fresh('items.item', 'opener'), $payment),
-                'status'        => 'pending',
-            ]);
+            app(\App\Services\PrintRouter::class)->cashier($receipts->buildReceipt($ticket->fresh('items.item', 'opener'), $payment), true);
         });
 
         $change = $data['cash_received'] - $total;

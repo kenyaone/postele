@@ -63,6 +63,14 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
 Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->group(function () {
     Route::get('/mpesa', [\App\Http\Controllers\Manage\MpesaLogController::class, 'index'])->name('mpesa');
     Route::get('/voids', [\App\Http\Controllers\Manage\VoidsController::class, 'index'])->name('voids');
+    $pc = \App\Http\Controllers\Manage\PrintersController::class;
+    Route::get('/printers', [$pc, 'index'])->name('printers');
+    Route::get('/printers/test-page', [$pc, 'testPage'])->name('printers.testpage');
+    Route::get('/printers/bridge/{kind}', [$pc, 'bridge'])->whereIn('kind', ['windows', 'python'])->name('printers.bridge');
+    Route::post('/printers', [$pc, 'store'])->name('printers.store');
+    Route::put('/printers/{printer}', [$pc, 'update'])->name('printers.update');
+    Route::delete('/printers/{printer}', [$pc, 'destroy'])->name('printers.destroy');
+    Route::post('/printers/{printer}/test', [$pc, 'test'])->middleware('throttle:20,1')->name('printers.test');
     Route::get('/', [DashboardController::class, 'index'])->name('index');
     Route::get('/menu', [MenuController::class, 'index'])->name('menu');
     Route::get('/settings',   [SettingsController::class, 'edit'])->name('settings');

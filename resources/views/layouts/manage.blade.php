@@ -35,6 +35,7 @@
         ['Debts', 'pos.debts', '&#128221;', 'pos.debts*', ['manager', 'cashier', 'waiter']],
         ['M-Pesa payments', 'manage.mpesa', '&#128241;', 'manage.mpesa*', ['manager']],
         ['Cancelled orders', 'manage.voids', '&#10060;', 'manage.voids*', ['manager']],
+        ['Printers', 'manage.printers', '&#128424;', 'manage.printers*', ['manager']],
         ['Menu',             'manage.menu',           '&#127869;', 'manage.menu',         ['manager']],
         ['Procurement',      'manage.procurement',    '&#128230;', 'manage.procurement*', ['manager']],
         ['Stock count',      'stock.count',           '&#128203;', 'stock.*',             ['manager', 'stock']],

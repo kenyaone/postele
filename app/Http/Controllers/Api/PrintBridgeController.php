@@ -11,16 +11,20 @@ class PrintBridgeController extends Controller
 {
     public function pending(): JsonResponse
     {
-        $jobs = PrintJob::where('status', 'pending')
+        \Illuminate\Support\Facades\Cache::put('print_bridge_seen', now()->timestamp, 86400);
+        $jobs = PrintJob::with('target')->whereNotNull('printer_id')->where('created_at', '>=', now()->subMinutes(15))->where('status', 'pending')
             ->where('tries', '<', 3)
             ->orderBy('id')
             ->limit(20)
-            ->get(['id', 'printer', 'payload_bytes', 'tries', 'created_at']);
+            ->get(['id', 'printer', 'printer_id', 'payload_bytes', 'tries', 'created_at']);
 
         return response()->json([
             'jobs' => $jobs->map(fn ($j) => [
                 'id'          => $j->id,
                 'printer'     => $j->printer,
+                'ip'           => $j->target?->ip,
+                'port'         => $j->target?->port ?? 9100,
+                'printer_name' => $j->target?->name,
                 'payload_b64' => base64_encode($j->payload_bytes),
                 'tries'       => $j->tries,
                 'created_at'  => $j->created_at->toIso8601String(),
