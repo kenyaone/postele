@@ -12,6 +12,7 @@ use App\Http\Controllers\StockController;
 use App\Http\Controllers\Manage\ProcurementController;
 use App\Http\Controllers\Manage\ReportController;
 use App\Http\Controllers\Manage\SettingsController;
+use App\Http\Controllers\Pos\MpesaController;
 use App\Http\Controllers\Pos\PosController;
 use App\Http\Controllers\Pos\ShiftController;
 use Illuminate\Support\Facades\Auth;
@@ -40,6 +41,10 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
     Route::get('/tickets/{ticket}/bill',                 [PosController::class, 'printBill'])->name('tickets.bill');
     Route::post('/tickets/{ticket}/close',               [PosController::class, 'closeBill'])->name('tickets.close');
     Route::post('/tickets/{ticket}/void',                [PosController::class, 'voidTicket'])->name('tickets.void');
+    Route::post('/tickets/{ticket}/mpesa/stk',    [MpesaController::class, 'stk'])->middleware('throttle:6,1')->name('tickets.mpesa.stk');
+    Route::get('/tickets/{ticket}/mpesa/status',  [MpesaController::class, 'stkStatus'])->name('tickets.mpesa.status');
+    Route::post('/tickets/{ticket}/mpesa/match',  [MpesaController::class, 'match'])->name('tickets.mpesa.match');
+    Route::post('/tickets/{ticket}/mpesa/manual', [MpesaController::class, 'manual'])->name('tickets.mpesa.manual');
 
     Route::get('/shift/open',  [ShiftController::class, 'openForm'])->name('shift.openForm');
     Route::post('/shift/open', [ShiftController::class, 'open'])->name('shift.open');

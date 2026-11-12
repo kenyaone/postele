@@ -185,6 +185,7 @@
                                     Close bill (Cash)
                                 </button>
                             </form>
+                            @include('pos.partials.mpesa')
                             <form method="POST" action="{{ route('pos.tickets.void', $ticket) }}"
                                   onsubmit="return confirm('Void this ticket?');" class="mt-2">
                                 @csrf
