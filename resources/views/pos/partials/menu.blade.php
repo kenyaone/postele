@@ -150,12 +150,44 @@
     function pump(action) {
         if (busy) return;
         var fd = queue.shift();
-        if (!fd) { clearTimeout(reloadT); reloadT = setTimeout(function () { saveScroll(); location.reload(); }, 700); return; }
+        if (!fd) { clearTimeout(reloadT); reloadT = setTimeout(softRefresh, 250); return; }
         busy = true; clearTimeout(reloadT);
         fetch(action, { method: 'POST', body: fd, credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) { busy = false; if (!r.ok) { saveScroll(); location.reload(); return; } pump(action); })
             .catch(function () { busy = false; saveScroll(); location.reload(); });
     }
+    // Update the order panel, dish badges and phone bar in place instead of reloading the whole page.
+    function softRefresh() {
+        fetch(location.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { if (!r.ok || (r.redirected && r.url.split('#')[0] !== location.href.split('#')[0])) throw 0; return r.text(); })
+            .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var np = doc.getElementById('ticket-panel'), op = document.getElementById('ticket-panel');
+                if (!np || !op) throw 0;
+                op.innerHTML = np.innerHTML;
+                document.querySelectorAll('.menu-item').forEach(function (f) {
+                    var id = (f.querySelector('input[name=item_id]') || {}).value;
+                    var nf = doc.querySelector('.menu-item input[name=item_id][value="' + id + '"]');
+                    var nb = nf ? nf.closest('.menu-item').querySelector('.qty-badge') : null, ob = f.querySelector('.qty-badge');
+                    if (nb && ob) { ob.textContent = nb.textContent; }
+                    else if (nb && !ob) { var top = f.querySelector('.tile-top'); if (top) top.appendChild(nb.cloneNode(true)); }
+                    else if (!nb && ob) { ob.remove(); }
+                });
+                var nbar = doc.querySelector('a[href="#ticket-panel"]'), obar = document.querySelector('a[href="#ticket-panel"]');
+                if (nbar && obar) { obar.innerHTML = nbar.innerHTML; }
+                else if (nbar || obar) { saveScroll(); location.reload(); }
+            })
+            .catch(function () { saveScroll(); location.reload(); });
+    }
+    document.addEventListener('submit', function (e) {
+        var f = e.target;
+        if (!f.matches || !f.matches('#ticket-panel form[data-soft]') || !window.fetch) return;
+        e.preventDefault();
+        f.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+        fetch(f.action, { method: 'POST', body: new FormData(f), credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { if (!r.ok) throw 0; softRefresh(); })
+            .catch(function () { saveScroll(); location.reload(); });
+    });
     document.querySelectorAll('.menu-item').forEach(function (f) {
         f.addEventListener('submit', function (e) {
             if (!window.fetch || !window.FormData) { saveScroll(); return; }

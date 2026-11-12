@@ -106,9 +106,9 @@
                             <div class="flex-1 min-w-0"><div class="font-semibold leading-tight truncate">{{ $line->item->name }}</div><div class="text-xs text-roast/60">KSh {{ number_format((float) $line->unit_price) }} each</div></div>
                             @if ($ticket->status === 'open')
                                 <div class="flex items-center rounded-full bg-crema ring-1 ring-roast/15">
-                                    <form method="POST" action="{{ route('pos.tickets.items.update', [$ticket, $line]) }}">@csrf @method('PATCH')<input type="hidden" name="qty" value="{{ $line->qty - 1 }}"><button class="w-12 h-12 rounded-full text-xl font-bold hover:bg-white active:bg-amber-100" title="{{ $line->qty > 1 ? 'One less' : 'Remove' }}">{!! $line->qty > 1 ? '&minus;' : '&#128465;' !!}</button></form>
+                                    <form method="POST" action="{{ route('pos.tickets.items.update', [$ticket, $line]) }}" data-soft>@csrf @method('PATCH')<input type="hidden" name="qty" value="{{ $line->qty - 1 }}"><button class="w-12 h-12 rounded-full text-xl font-bold hover:bg-white active:bg-amber-100" title="{{ $line->qty > 1 ? 'One less' : 'Remove' }}">{!! $line->qty > 1 ? '&minus;' : '&#128465;' !!}</button></form>
                                     <span class="w-8 text-center text-lg font-extrabold">{{ $line->qty }}</span>
-                                    <form method="POST" action="{{ route('pos.tickets.items.update', [$ticket, $line]) }}">@csrf @method('PATCH')<input type="hidden" name="qty" value="{{ $line->qty + 1 }}"><button class="w-12 h-12 rounded-full text-xl font-bold hover:bg-white active:bg-amber-100" title="One more">+</button></form>
+                                    <form method="POST" action="{{ route('pos.tickets.items.update', [$ticket, $line]) }}" data-soft>@csrf @method('PATCH')<input type="hidden" name="qty" value="{{ $line->qty + 1 }}"><button class="w-12 h-12 rounded-full text-xl font-bold hover:bg-white active:bg-amber-100" title="One more">+</button></form>
                                 </div>
                             @else
                                 <span class="text-sm font-extrabold text-roast/80">&times;{{ $line->qty }}</span>

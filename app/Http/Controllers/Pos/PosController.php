@@ -86,7 +86,7 @@ class PosController extends Controller
             ]);
         }
 
-        return redirect()->route('pos.tickets.show', $ticket);
+        return $request->ajax() ? response()->noContent() : redirect()->route('pos.tickets.show', $ticket);
     }
 
     public function updateLine(Request $request, Ticket $ticket, TicketItem $ticketItem)
@@ -104,7 +104,7 @@ class PosController extends Controller
             $ticketItem->update(['qty' => $qty]);
         }
 
-        return redirect()->route('pos.tickets.show', $ticket);
+        return $request->ajax() ? response()->noContent() : redirect()->route('pos.tickets.show', $ticket);
     }
 
     public function sendToKitchen(Request $request, Ticket $ticket, Receipts $receipts)
