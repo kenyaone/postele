@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Item;
 use App\Models\Payment;
 use App\Models\PrintJob;
+use App\Models\Shift;
 use App\Models\Ticket;
 use App\Models\TicketItem;
 use App\Services\Receipts;
@@ -17,11 +18,16 @@ class PosController extends Controller
 {
     public function index(Request $request)
     {
-        $user = $request->user();
+        $user  = $request->user();
+        $shift = Shift::currentFor($user->id);
+
+        if ($user->role !== 'manager' && ! $shift) {
+            return redirect()->route('pos.shift.openForm');
+        }
+
         $current = Ticket::where('opened_by', $user->id)
             ->whereIn('status', ['open', 'sent'])
-            ->latest('opened_at')
-            ->first();
+            ->latest('opened_at')->first();
 
         if ($current) {
             return redirect()->route('pos.tickets.show', $current);
@@ -30,13 +36,19 @@ class PosController extends Controller
         return view('pos.index', [
             'ticket'     => null,
             'categories' => $this->menu(),
+            'shift'      => $shift,
         ]);
     }
 
     public function startTicket(Request $request)
     {
+        $user = $request->user();
+        if ($user->role !== 'manager' && ! Shift::currentFor($user->id)) {
+            return redirect()->route('pos.shift.openForm');
+        }
+
         $ticket = Ticket::create([
-            'opened_by' => $request->user()->id,
+            'opened_by' => $user->id,
             'status'    => 'open',
             'opened_at' => now(),
         ]);
@@ -51,6 +63,7 @@ class PosController extends Controller
         return view('pos.index', [
             'ticket'     => $ticket,
             'categories' => $this->menu(),
+            'shift'      => Shift::currentFor($request->user()->id),
         ]);
     }
 
@@ -62,11 +75,7 @@ class PosController extends Controller
         $data = $request->validate(['item_id' => 'required|exists:items,id']);
         $item = Item::findOrFail($data['item_id']);
 
-        $line = $ticket->items()
-            ->where('item_id', $item->id)
-            ->whereNull('sent_at')
-            ->first();
-
+        $line = $ticket->items()->where('item_id', $item->id)->whereNull('sent_at')->first();
         if ($line) {
             $line->increment('qty');
         } else {
@@ -158,8 +167,7 @@ class PosController extends Controller
         });
 
         $change = $data['cash_received'] - $total;
-        return redirect()->route('pos.tickets.show', $ticket)
-            ->with('change', $change);
+        return redirect()->route('pos.tickets.show', $ticket)->with('change', $change);
     }
 
     public function voidTicket(Request $request, Ticket $ticket)

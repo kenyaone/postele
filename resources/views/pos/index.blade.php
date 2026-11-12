@@ -18,6 +18,14 @@
                         &mdash; <span class="font-semibold uppercase">{{ $ticket->status }}</span>
                     </span>
                 @endif
+                @isset($shift)
+                    @if ($shift)
+                        <a href="{{ route('pos.shift.show') }}"
+                           class="text-sm bg-emerald-100 text-emerald-800 rounded px-2 py-1 hover:bg-emerald-200">
+                            Shift open &middot; {{ $shift->opened_at->format('H:i') }}
+                        </a>
+                    @endif
+                @endisset
             </div>
             <div class="flex items-center gap-3 text-sm">
                 <span>{{ auth()->user()->name }} <span class="text-gray-500">({{ auth()->user()->role }})</span></span>

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Payment;
+use App\Models\Shift;
 use App\Models\Ticket;
 
 class Receipts
@@ -87,5 +88,76 @@ class Receipts
             ->line('Thank you! Order again:')
             ->line($wa)
             ->feed(4)->cut()->get();
+    }
+
+    public function buildShiftReport(Shift $shift, array $d, bool $isZ): string
+    {
+        $cafe = config('pos.cafe_name');
+
+        $e = (new EscPos())->init()
+            ->align('center')->bold(true)->size(2, 2)
+            ->line($isZ ? 'Z REPORT' : 'X REPORT')
+            ->size(1, 1)->bold(false)
+            ->line($cafe)
+            ->line(str_repeat('-', self::WIDTH))
+            ->align('left')
+            ->line('Cashier: ' . ($shift->user->name ?? '?'))
+            ->line('Opened:  ' . $shift->opened_at->format('d M Y H:i'))
+            ->line($shift->closed_at
+                ? 'Closed:  ' . $shift->closed_at->format('d M Y H:i')
+                : '(shift ongoing)')
+            ->line(str_repeat('-', self::WIDTH))
+            ->line('TICKETS: ' . $d['ticketsPaid'] . ' paid, ' . $d['ticketsVoid'] . ' void')
+            ->line(str_repeat('-', self::WIDTH))
+            ->bold(true)->line('BY CATEGORY')->bold(false);
+
+        foreach ($d['byCategory'] as $cat => $total) {
+            $e->line($this->padLine(substr($cat, 0, 22), number_format($total, 2)));
+        }
+
+        $e->line(str_repeat('-', self::WIDTH))
+          ->bold(true)->size(1, 2)
+          ->line($this->padLine('TOTAL', number_format($d['totalSales'], 2)))
+          ->size(1, 1)->bold(false)
+          ->line(str_repeat('-', self::WIDTH))
+          ->bold(true)->line('BY METHOD')->bold(false);
+
+        $methodLabels = [
+            'cash'           => 'Cash',
+            'kk_stk'         => 'M-Pesa STK',
+            'kk_till_auto'   => 'M-Pesa Till auto',
+            'kk_till_manual' => 'M-Pesa Till man',
+        ];
+        foreach ($methodLabels as $k => $label) {
+            $amt = (float) ($d['byMethod'][$k] ?? 0);
+            $e->line($this->padLine($label, number_format($amt, 2)));
+        }
+
+        $e->line(str_repeat('-', self::WIDTH))
+          ->bold(true)->line('CASH RECONCILE')->bold(false)
+          ->line($this->padLine('Opening', number_format((float) $shift->cash_opening, 2)))
+          ->line($this->padLine('+ Cash sales', number_format($d['cashSales'], 2)))
+          ->line($this->padLine('= Expected', number_format($d['cashExpected'], 2)));
+
+        if ($d['cashDeclared'] !== null) {
+            $sign = $d['variance'] < 0 ? '-' : '+';
+            $e->line($this->padLine('Declared', number_format($d['cashDeclared'], 2)))
+              ->bold(true)
+              ->line($this->padLine('Variance', $sign . number_format(abs($d['variance']), 2)))
+              ->bold(false);
+        }
+
+        if ($d['kkUnmatched'] > 0) {
+            $e->line(str_repeat('-', self::WIDTH))
+              ->bold(true)->line('KK UNMATCHED: ' . $d['kkUnmatched'])->bold(false);
+        }
+
+        return $e->feed(4)->cut()->get();
+    }
+
+    private function padLine(string $label, string $val): string
+    {
+        $pad = self::WIDTH - strlen($label) - strlen($val);
+        return $label . str_repeat(' ', max(1, $pad)) . $val;
     }
 }
