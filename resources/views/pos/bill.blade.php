@@ -24,7 +24,6 @@
         table { width: 100%; border-collapse: collapse; }
         td { vertical-align: top; padding: 1px 0; }
         td.r { text-align: right; white-space: nowrap; padding-left: 6px; }
-        .cut { text-align: center; font-size: 10px; margin-top: 8px; letter-spacing: 2px; }
         .noprint { margin: 14px 0; text-align: center; font-family: sans-serif; font-size: 14px; }
         .noprint button { padding: 6px 16px; }
         @media print { .noprint { display: none; } }
@@ -43,7 +42,6 @@
             @endforeach
         </table>
         @if ($ticket->notes)<hr><div class="b">Notes: {{ $ticket->notes }}</div>@endif
-        <div class="cut">- - - - cut - - - -</div>
     </section>
 @endif
 
