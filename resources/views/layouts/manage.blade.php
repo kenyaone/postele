@@ -16,7 +16,7 @@
         ['Procurement',      'manage.procurement',    '&#128230;', 'manage.procurement*', ['manager']],
         ['Stock count',      'stock.count',           '&#128203;', 'stock.*',             ['manager', 'stock']],
         ['Expenses',         'manage.expenses.index', '&#128184;', 'manage.expenses.*',   ['manager']],
-        ['HR &amp; Payroll', null,                    '&#128101;', null,                  ['manager']],
+        ['HR &amp; Payroll', 'manage.hr',             '&#128101;', 'manage.hr*',          ['manager']],
         ['Reports',          'manage.reports',        '&#128202;', 'manage.reports*',     ['manager']],
         ['Users',            'manage.users.index',    '&#128100;', 'manage.users.*',      ['manager']],
         ['Settings',         'manage.settings',       '&#9881;',   'manage.settings*',    ['manager']],

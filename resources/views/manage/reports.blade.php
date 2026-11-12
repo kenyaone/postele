@@ -3,7 +3,7 @@
 
 @php
     $ksh = fn ($v) => number_format((float) $v, 2);
-    $net = $sales - $expenses;
+    $costs = $expenses + $purchases + $payroll; $net = $sales - $costs;
     $q = ['from' => $from->toDateString(), 'to' => $to->toDateString()];
     $methodLabels = ['cash' => 'Cash', 'kk_stk' => 'M-Pesa STK', 'kk_till_auto' => 'M-Pesa Till', 'kk_till_manual' => 'M-Pesa Till (manual)'];
     $presets = ['today' => 'Today', 'yesterday' => 'Yesterday', 'this_week' => 'This week', 'this_month' => 'This month', 'last_month' => 'Last month'];
@@ -31,8 +31,8 @@
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="bg-white rounded-xl shadow p-4"><div class="text-xs uppercase text-gray-500">Sales</div><div class="text-2xl font-bold text-emerald-700">KSh {{ $ksh($sales) }}</div></div>
         <div class="bg-white rounded-xl shadow p-4"><div class="text-xs uppercase text-gray-500">Tickets</div><div class="text-2xl font-bold">{{ $tickets }}</div><div class="text-xs text-gray-500">Avg KSh {{ $ksh($tickets ? $sales / $tickets : 0) }} @if ($voids) &middot; <span class="text-red-600">{{ $voids }} void</span> @endif</div></div>
-        <div class="bg-white rounded-xl shadow p-4"><div class="text-xs uppercase text-gray-500">Expenses</div><div class="text-2xl font-bold text-red-700">KSh {{ $ksh($expenses) }}</div></div>
-        <div class="bg-white rounded-xl shadow p-4"><div class="text-xs uppercase text-gray-500">Net (sales &minus; expenses)</div><div class="text-2xl font-bold {{ $net < 0 ? 'text-red-700' : '' }}">KSh {{ $ksh($net) }}</div><div class="text-xs text-gray-500">{{ $sales > 0 ? round($net / $sales * 100) . '% of sales' : '' }}</div></div>
+        <div class="bg-white rounded-xl shadow p-4"><div class="text-xs uppercase text-gray-500">Costs</div><div class="text-2xl font-bold text-red-700">KSh {{ $ksh($costs) }}</div><div class="text-xs text-gray-500">Expenses {{ $ksh($expenses) }} &middot; Purchases {{ $ksh($purchases) }} &middot; Payroll {{ $ksh($payroll) }}</div></div>
+        <div class="bg-white rounded-xl shadow p-4"><div class="text-xs uppercase text-gray-500">Net profit (sales &minus; costs)</div><div class="text-2xl font-bold {{ $net < 0 ? 'text-red-700' : '' }}">KSh {{ $ksh($net) }}</div><div class="text-xs text-gray-500">{{ $sales > 0 ? round($net / $sales * 100) . '% of sales' : '' }}</div></div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -78,7 +78,7 @@
             <p class="text-sm text-gray-400 italic">Nothing in this period.</p>
         @else
             <table class="w-full text-sm">
-                <thead class="text-left text-gray-500 border-b"><tr><th class="py-1">Date</th><th class="py-1 text-right">Tickets</th><th class="py-1 text-right">Sales</th><th class="py-1 text-right">Expenses</th><th class="py-1 text-right">Net</th></tr></thead>
+                <thead class="text-left text-gray-500 border-b"><tr><th class="py-1">Date</th><th class="py-1 text-right">Tickets</th><th class="py-1 text-right">Sales</th><th class="py-1 text-right">Expenses</th><th class="py-1 text-right">Purchases</th><th class="py-1 text-right">Payroll</th><th class="py-1 text-right">Net</th></tr></thead>
                 <tbody>
                     @foreach ($daily as $r)
                         <tr class="border-b last:border-0">
@@ -86,6 +86,8 @@
                             <td class="py-1 text-right">{{ $r['tickets'] }}</td>
                             <td class="py-1 text-right">{{ $ksh($r['sales']) }}</td>
                             <td class="py-1 text-right">{{ $ksh($r['expenses']) }}</td>
+                            <td class="py-1 text-right">{{ $ksh($r['purchases']) }}</td>
+                            <td class="py-1 text-right">{{ $ksh($r['payroll']) }}</td>
                             <td class="py-1 text-right font-medium {{ $r['net'] < 0 ? 'text-red-700' : '' }}">{{ $ksh($r['net']) }}</td>
                         </tr>
                     @endforeach
@@ -124,5 +126,5 @@
         </div>
     </div>
 
-    <p class="text-xs text-gray-400 mt-6">Net counts sales and recorded expenses only. Supplier purchases and payroll will be added when Procurement and HR &amp; Payroll are built.</p>
+    <p class="text-xs text-gray-400 mt-6">Net profit = sales &minus; expenses &minus; supplier purchases (by purchase date) &minus; staff payments (by date paid). Sales are money received.</p>
 @endsection

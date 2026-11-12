@@ -3,8 +3,8 @@
 
 @php
     $ksh = fn ($v) => 'KSh ' . number_format((float) $v, 0);
-    $netToday = $salesToday - $expToday;
-    $netMonth = $salesMonth - $expMonth;
+    $costToday = $expToday + $purToday + $payToday; $netToday = $salesToday - $costToday;
+    $costMonth = $expMonth + $purMonth + $payMonth; $netMonth = $salesMonth - $costMonth;
     $methodLabels = ['cash' => 'Cash', 'kk_stk' => 'M-Pesa STK', 'kk_till_auto' => 'M-Pesa Till', 'kk_till_manual' => 'M-Pesa Till (manual)'];
 @endphp
 
@@ -27,21 +27,22 @@
             <div class="text-xs text-gray-500 mt-1">Avg {{ $ksh($avgTicket) }} @if ($voidsToday) &middot; <span class="text-red-600">{{ $voidsToday }} void</span> @endif</div>
         </div>
         <div class="bg-white rounded-xl shadow p-4">
-            <div class="text-xs uppercase text-gray-500">Expenses today</div>
-            <div class="text-2xl font-bold text-red-700">{{ $ksh($expToday) }}</div>
+            <div class="text-xs uppercase text-gray-500">Costs today</div>
+            <div class="text-2xl font-bold text-red-700">{{ $ksh($costToday) }}</div>
+            <div class="text-xs text-gray-500">Exp {{ $ksh($expToday) }} &middot; Purch {{ $ksh($purToday) }} &middot; Pay {{ $ksh($payToday) }}</div>
             <a href="{{ route('manage.expenses.index') }}" class="text-xs text-emerald-700 hover:underline">+ Record expense</a>
         </div>
         <div class="bg-white rounded-xl shadow p-4">
             <div class="text-xs uppercase text-gray-500">Net today</div>
             <div class="text-2xl font-bold {{ $netToday < 0 ? 'text-red-700' : 'text-gray-900' }}">{{ $ksh($netToday) }}</div>
-            <div class="text-xs text-gray-500 mt-1">Sales minus expenses</div>
+            <div class="text-xs text-gray-500 mt-1">Sales minus all costs</div>
         </div>
     </div>
 
     {{-- MONTH --}}
     <div class="bg-white rounded-xl shadow p-4 mb-6 grid grid-cols-3 gap-4 text-center">
         <div><div class="text-xs uppercase text-gray-500">{{ now()->format('F') }} sales</div><div class="text-lg font-bold text-emerald-700">{{ $ksh($salesMonth) }}</div></div>
-        <div><div class="text-xs uppercase text-gray-500">{{ now()->format('F') }} expenses</div><div class="text-lg font-bold text-red-700">{{ $ksh($expMonth) }}</div></div>
+        <div><div class="text-xs uppercase text-gray-500">{{ now()->format('F') }} costs</div><div class="text-lg font-bold text-red-700">{{ $ksh($costMonth) }}</div></div>
         <div><div class="text-xs uppercase text-gray-500">{{ now()->format('F') }} net</div><div class="text-lg font-bold {{ $netMonth < 0 ? 'text-red-700' : '' }}">{{ $ksh($netMonth) }}</div></div>
     </div>
 
@@ -52,7 +53,7 @@
                 <h2 class="font-semibold">Last 7 days</h2>
                 <div class="text-xs text-gray-500">
                     <span class="inline-block w-3 h-3 bg-emerald-500 rounded-sm align-middle"></span> Sales
-                    <span class="inline-block w-3 h-3 bg-red-400 rounded-sm align-middle ml-3"></span> Expenses
+                    <span class="inline-block w-3 h-3 bg-red-400 rounded-sm align-middle ml-3"></span> Costs
                 </div>
             </div>
             <div class="flex items-end gap-2 h-48">

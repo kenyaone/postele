@@ -26,6 +26,10 @@ class DashboardController extends Controller
 
         $salesMonth = (float) Payment::where('received_at', '>=', $monthStart)->sum('amount');
         $expMonth   = (float) Expense::where('spent_on', '>=', $monthStart->toDateString())->sum('amount');
+        $purToday = (float) \App\Models\Purchase::whereDate('purchased_on', $today->toDateString())->sum('total');
+        $payToday = (float) \App\Models\StaffPayment::whereDate('paid_on', $today->toDateString())->sum('amount');
+        $purMonth = (float) \App\Models\Purchase::where('purchased_on', '>=', $monthStart->toDateString())->sum('total');
+        $payMonth = (float) \App\Models\StaffPayment::where('paid_on', '>=', $monthStart->toDateString())->sum('amount');
 
         // Last 7 days, oldest first
         $since = now()->subDays(6)->startOfDay();
@@ -33,6 +37,10 @@ class DashboardController extends Controller
             ->selectRaw('DATE(received_at) as d, SUM(amount) as s')->groupBy('d')->pluck('s', 'd');
         $expByDay = Expense::where('spent_on', '>=', $since->toDateString())
             ->selectRaw('spent_on as d, SUM(amount) as s')->groupBy('spent_on')->pluck('s', 'd');
+        $purByDay = \App\Models\Purchase::where('purchased_on', '>=', $since->toDateString())
+            ->selectRaw('purchased_on as d, SUM(total) as s')->groupBy('purchased_on')->pluck('s', 'd');
+        $payByDay = \App\Models\StaffPayment::where('paid_on', '>=', $since->toDateString())
+            ->selectRaw('paid_on as d, SUM(amount) as s')->groupBy('paid_on')->pluck('s', 'd');
         $days = [];
         for ($i = 6; $i >= 0; $i--) {
             $d = now()->subDays($i);
@@ -40,7 +48,7 @@ class DashboardController extends Controller
             $days[] = [
                 'label'    => $i === 0 ? 'Today' : $d->format('D j'),
                 'sales'    => (float) ($salesByDay[$key] ?? 0),
-                'expenses' => (float) ($expByDay[$key] ?? 0),
+                'expenses' => (float) ($expByDay[$key] ?? 0) + (float) ($purByDay[$key] ?? 0) + (float) ($payByDay[$key] ?? 0),
             ];
         }
         $chartMax = max(1, max(array_map(fn ($d) => max($d['sales'], $d['expenses']), $days)));
@@ -60,6 +68,10 @@ class DashboardController extends Controller
             'expToday'     => $expToday,
             'salesMonth'   => $salesMonth,
             'expMonth'     => $expMonth,
+            'purToday'     => $purToday,
+            'payToday'     => $payToday,
+            'purMonth'     => $purMonth,
+            'payMonth'     => $payMonth,
             'days'         => $days,
             'chartMax'     => $chartMax,
             'topItems'     => $topItems,

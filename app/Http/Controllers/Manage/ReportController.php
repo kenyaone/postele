@@ -29,6 +29,8 @@ class ReportController extends Controller
         $expByCat = Expense::whereBetween('spent_on', [$from->toDateString(), $to->toDateString()])
             ->selectRaw('category, SUM(amount) as total')->groupBy('category')->orderByDesc('total')->get();
         $expenses = (float) $expByCat->sum('total');
+        $purchases = (float) \App\Models\Purchase::whereBetween('purchased_on', [$from->toDateString(), $to->toDateString()])->sum('total');
+        $payroll   = (float) \App\Models\StaffPayment::whereBetween('paid_on', [$from->toDateString(), $to->toDateString()])->sum('amount');
 
         // Daily table
         $salesDay = Payment::whereBetween('received_at', [$fromDt, $toDt])
@@ -37,12 +39,16 @@ class ReportController extends Controller
             ->selectRaw('DATE(closed_at) as d, COUNT(*) as n')->groupBy('d')->pluck('n', 'd');
         $expDay = Expense::whereBetween('spent_on', [$from->toDateString(), $to->toDateString()])
             ->selectRaw('spent_on as d, SUM(amount) as s')->groupBy('spent_on')->pluck('s', 'd');
+        $purDay = \App\Models\Purchase::whereBetween('purchased_on', [$from->toDateString(), $to->toDateString()])
+            ->selectRaw('purchased_on as d, SUM(total) as s')->groupBy('purchased_on')->pluck('s', 'd');
+        $payDay = \App\Models\StaffPayment::whereBetween('paid_on', [$from->toDateString(), $to->toDateString()])
+            ->selectRaw('paid_on as d, SUM(amount) as s')->groupBy('paid_on')->pluck('s', 'd');
         $daily = [];
         for ($d = $to->copy(); $d->gte($from); $d->subDay()) {
             $k = $d->toDateString();
-            $s = (float) ($salesDay[$k] ?? 0); $x = (float) ($expDay[$k] ?? 0);
-            if ($s == 0 && $x == 0 && empty($tixDay[$k])) continue;
-            $daily[] = ['date' => $d->copy(), 'tickets' => (int) ($tixDay[$k] ?? 0), 'sales' => $s, 'expenses' => $x, 'net' => $s - $x];
+            $s = (float) ($salesDay[$k] ?? 0); $x = (float) ($expDay[$k] ?? 0); $pu = (float) ($purDay[$k] ?? 0); $pa = (float) ($payDay[$k] ?? 0);
+            if ($s == 0 && $x == 0 && $pu == 0 && $pa == 0 && empty($tixDay[$k])) continue;
+            $daily[] = ['date' => $d->copy(), 'tickets' => (int) ($tixDay[$k] ?? 0), 'sales' => $s, 'expenses' => $x, 'purchases' => $pu, 'payroll' => $pa, 'net' => $s - $x - $pu - $pa];
         }
 
         // What sold (paid tickets closed in range)
@@ -62,8 +68,8 @@ class ReportController extends Controller
 
         if ($request->query('export') === 'daily') {
             return $this->csv("tele-cafe-daily-{$from->toDateString()}-to-{$to->toDateString()}.csv",
-                ['Date', 'Tickets', 'Sales', 'Expenses', 'Net'],
-                array_map(fn ($r) => [$r['date']->toDateString(), $r['tickets'], $r['sales'], $r['expenses'], $r['net']], array_reverse($daily)));
+                ['Date', 'Tickets', 'Sales', 'Expenses', 'Purchases', 'Payroll', 'Net'],
+                array_map(fn ($r) => [$r['date']->toDateString(), $r['tickets'], $r['sales'], $r['expenses'], $r['purchases'], $r['payroll'], $r['net']], array_reverse($daily)));
         }
         if ($request->query('export') === 'items') {
             return $this->csv("tele-cafe-items-{$from->toDateString()}-to-{$to->toDateString()}.csv",
@@ -72,7 +78,7 @@ class ReportController extends Controller
         }
 
         return view('manage.reports', compact(
-            'from', 'to', 'preset', 'sales', 'byMethod', 'tickets', 'voids', 'expenses', 'expByCat',
+            'from', 'to', 'preset', 'sales', 'byMethod', 'tickets', 'voids', 'expenses', 'expByCat', 'purchases', 'payroll',
             'daily', 'byItem', 'byCategory', 'byCashier'
         ));
     }

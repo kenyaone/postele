@@ -5,6 +5,7 @@ use App\Http\Controllers\Manage\CategoryController;
 use App\Http\Controllers\Manage\DashboardController;
 use App\Http\Controllers\Manage\ExpenseController;
 use App\Http\Controllers\Manage\ItemController;
+use App\Http\Controllers\Manage\HrController;
 use App\Http\Controllers\Manage\MenuController;
 use App\Http\Controllers\Manage\UserController;
 use App\Http\Controllers\StockController;
@@ -60,6 +61,13 @@ Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->
     Route::delete('/expenses/{expense}',    [ExpenseController::class, 'destroy'])->name('expenses.destroy');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports');
+
+    Route::get('/hr',                         [HrController::class, 'index'])->name('hr');
+    Route::post('/hr/staff',                  [HrController::class, 'storeStaff'])->name('hr.staff.store');
+    Route::get('/hr/staff/{staff}',           [HrController::class, 'showStaff'])->name('hr.staff');
+    Route::patch('/hr/staff/{staff}',         [HrController::class, 'updateStaff'])->name('hr.staff.update');
+    Route::post('/hr/staff/{staff}/payments', [HrController::class, 'storePayment'])->name('hr.payments.store');
+    Route::delete('/hr/payments/{payment}',   [HrController::class, 'destroyPayment'])->name('hr.payments.destroy');
 
     Route::get('/users',              [UserController::class, 'index'])->name('users.index');
     Route::post('/users',             [UserController::class, 'store'])->name('users.store');
