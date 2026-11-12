@@ -195,8 +195,10 @@
                         @elseif ($ticket->status === 'paid')
                             <div class="bg-emerald-600 text-white rounded p-4 text-center mb-3">
                                 <div class="text-2xl font-bold">&#10003; PAID</div>
-                                <div class="text-sm opacity-90">Receipt queued</div>
+                                <div class="text-sm opacity-90">Payment recorded</div>
                             </div>
+                            <button type="button" onclick="printBill('{{ route('pos.tickets.bill', [$ticket, 'mode' => 'receipt']) }}')"
+                                    class="w-full border border-gray-400 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded py-2 mb-2">&#129534;&nbsp; Print receipt</button>
                             <form method="POST" action="{{ route('pos.tickets.store') }}">
                                 @csrf
                                 <button class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded py-3">

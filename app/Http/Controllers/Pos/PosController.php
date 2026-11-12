@@ -130,24 +130,34 @@ class PosController extends Controller
             ]);
         });
 
-        $redirect = redirect()->route('pos.tickets.show', $ticket)->with('ok', "Sent to kitchen \u{2014} KOT queued.");
-        if ($request->boolean('print_bill')) {
-            // "Send + print bill": the POS page opens the bill print dialog as soon as it reloads.
-            $redirect->with('print_bill', route('pos.tickets.bill', $ticket));
-        }
-        return $redirect;
+        // One counter printer: the POS page opens the print dialog on reload with the kitchen ticket
+        // (and, for "Send + print bill", the bill straight after it in the same print job).
+        $mode = $request->boolean('print_bill') ? 'both' : 'kot';
+        return redirect()->route('pos.tickets.show', $ticket)
+            ->with('ok', $mode === 'both' ? 'Sent to kitchen. Printing kitchen ticket and bill.' : 'Sent to kitchen. Printing kitchen ticket.')
+            ->with('print_bill', route('pos.tickets.bill', [$ticket, 'mode' => $mode]));
     }
 
+    /** Browser-printed slips. mode: kot | both (kitchen ticket + bill) | bill | receipt (paid tickets). */
     public function printBill(Request $request, Ticket $ticket)
     {
         $this->authorizeTicket($request, $ticket);
-        abort_unless(in_array($ticket->status, ['open', 'sent'], true), 403, 'Ticket already closed.');
+        $mode = (string) $request->query('mode', 'bill');
+        abort_unless(in_array($mode, ['kot', 'both', 'bill', 'receipt'], true), 404);
+        if ($mode === 'receipt') {
+            abort_unless($ticket->status === 'paid', 403, 'Ticket is not paid yet.');
+        } else {
+            abort_unless(in_array($ticket->status, ['open', 'sent'], true), 403, 'Ticket already closed.');
+        }
 
         $ticket->load('items.item', 'opener');
         abort_if($ticket->items->isEmpty(), 422, 'Ticket is empty.');
 
-        // Browser-printed pro-forma bill (opens the print dialog); nothing is queued to print_jobs.
-        return view('pos.bill', ['ticket' => $ticket]);
+        return view('pos.bill', [
+            'ticket'  => $ticket,
+            'mode'    => $mode,
+            'payment' => $mode === 'receipt' ? $ticket->payments()->latest('id')->first() : null,
+        ]);
     }
 
     public function closeBill(Request $request, Ticket $ticket, Receipts $receipts)
