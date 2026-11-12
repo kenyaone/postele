@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Ticket extends Model
 {
-    protected $fillable = ['opened_by', 'status', 'opened_at', 'closed_at', 'notes', 'void_reason', 'voided_by', 'void_approved_by'];
+    protected $fillable = ['opened_by', 'status', 'opened_at', 'closed_at', 'notes', 'void_reason', 'voided_by', 'void_approved_by', 'channel'];
 
     protected $casts = [
         'opened_at' => 'datetime',
@@ -32,6 +32,8 @@ class Ticket extends Model
 
     public function voider(): BelongsTo   { return $this->belongsTo(User::class, 'voided_by'); }
     public function approver(): BelongsTo { return $this->belongsTo(User::class, 'void_approved_by'); }
+
+    public function creditSale(): \Illuminate\Database\Eloquent\Relations\HasOne { return $this->hasOne(CreditSale::class); }
 
     public function getTotalAttribute(): float
     {

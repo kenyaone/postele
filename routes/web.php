@@ -34,6 +34,12 @@ Route::post('/logout', [PinLoginController::class, 'destroy'])->middleware('auth
 
 Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name('pos.')->group(function () {
     Route::get('/bills', [\App\Http\Controllers\Pos\BillsController::class, 'index'])->name('bills');
+    Route::post('/channel', [PosController::class, 'setChannel'])->name('channel');
+    Route::post('/tickets/{ticket}/credit', [\App\Http\Controllers\Pos\CreditController::class, 'store'])->name('tickets.credit');
+    Route::get('/history', [\App\Http\Controllers\Pos\HistoryController::class, 'index'])->name('history');
+    Route::get('/debts', [\App\Http\Controllers\Pos\DebtsController::class, 'index'])->name('debts');
+    Route::get('/debts/{customer}', [\App\Http\Controllers\Pos\DebtsController::class, 'show'])->name('debts.show');
+    Route::post('/debts/{customer}/payments', [\App\Http\Controllers\Pos\DebtsController::class, 'storePayment'])->name('debts.pay');
     Route::get('/',                                      [PosController::class, 'index'])->name('index');
     Route::post('/tickets',                              [PosController::class, 'startTicket'])->name('tickets.store');
     Route::get('/tickets/{ticket}',                      [PosController::class, 'show'])->name('tickets.show');

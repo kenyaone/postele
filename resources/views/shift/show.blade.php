@@ -78,6 +78,7 @@
                 <table class="w-full text-sm">
                     <tr><td class="py-1">Opening float</td><td class="py-1 text-right">KSh {{ number_format($shift->cash_opening, 2) }}</td></tr>
                     <tr><td class="py-1">+ Cash sales</td><td class="py-1 text-right">KSh {{ number_format($report['cashSales'], 2) }}</td></tr>
+@if (($report['debtCash'] ?? 0) > 0)<tr><td class="py-1">+ Debt repayments (cash)</td><td class="py-1 text-right">KSh {{ number_format($report['debtCash'], 2) }}</td></tr>@endif
                     <tr class="font-semibold border-t">
                         <td class="py-1">= Expected in till</td>
                         <td class="py-1 text-right">KSh {{ number_format($report['cashExpected'], 2) }}</td>
@@ -128,5 +129,6 @@
         </div>
     </div>
 @include('partials.touch')
+@include('partials.footer')
 </body>
 </html>

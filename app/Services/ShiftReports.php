@@ -59,7 +59,9 @@ class ShiftReports
             ];
         }
 
-        $cashExpected = (float) $shift->cash_opening + $cashSales;
+        $debtCash = \Illuminate\Support\Facades\Schema::hasTable('credit_payments')
+            ? (float) \App\Models\CreditPayment::where('method', 'cash')->whereBetween('received_at', [$start, $end])->sum('amount') : 0.0;
+        $cashExpected = (float) $shift->cash_opening + $cashSales + $debtCash;
         $cashDeclared = $shift->cash_declared !== null ? (float) $shift->cash_declared : null;
         $variance     = $cashDeclared !== null ? $cashDeclared - $cashExpected : null;
 
@@ -69,7 +71,7 @@ class ShiftReports
             'byMethod', 'cashSales', 'totalSales',
             'ticketsPaid', 'ticketsVoid',
             'byCategory', 'byItem',
-            'cashExpected', 'cashDeclared', 'variance',
+            'cashExpected', 'cashDeclared', 'variance', 'debtCash',
             'kkUnmatched'
         );
     }

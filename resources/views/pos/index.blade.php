@@ -39,7 +39,7 @@
             @endif
         @endisset
         <nav class="ml-auto flex items-center gap-1 text-sm">
-            <a href="{{ route('pos.bills') }}" class="rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#129534; Bills @if ($openBills)<span class="ml-0.5 bg-saffron text-espresso text-xs font-extrabold rounded-full px-1.5">{{ $openBills }}</span>@endif</a>
+            <a href="{{ route('pos.history') }}" class="hidden sm:block rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#128338; History</a>@if (\Illuminate\Support\Facades\Schema::hasTable('credit_sales'))<a href="{{ route('pos.debts') }}" class="hidden sm:block rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#128221; Debts</a>@endif<a href="{{ route('pos.bills') }}" class="rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#129534; Bills @if ($openBills)<span class="ml-0.5 bg-saffron text-espresso text-xs font-extrabold rounded-full px-1.5">{{ $openBills }}</span>@endif</a>
             @if ($me->role === 'manager')<a href="{{ route('manage.index') }}" class="hidden sm:block rounded-xl px-3 py-2 hover:bg-white/10">Manage</a>@endif
             <span class="hidden md:flex items-center gap-2 pl-3 ml-1 border-l border-white/15">
                 <span class="w-8 h-8 rounded-full bg-roast grid place-items-center font-bold">{{ strtoupper(mb_substr($me->name, 0, 1)) }}</span>
@@ -79,7 +79,9 @@
                 </form>
             </div>
         @endif
-        @include('pos.partials.menu')
+        @php $hasCredit = \Illuminate\Support\Facades\Schema::hasTable('credit_sales'); $isGlovo = $hasCredit && $ticket && ($ticket->channel ?? 'house') === 'glovo'; @endphp
+@if ($hasCredit) @include('pos.partials.channel') @endif
+@include('pos.partials.menu')
     </div>
 
     <aside id="ticket-panel" class="lg:sticky lg:top-20 self-start scroll-mt-20">
@@ -138,7 +140,7 @@
                 @elseif ($ticket->status === 'sent')
                     @php
                         $sentAt = $ticket->items->pluck('sent_at')->filter()->max();
-                        $payTab = ($errors->has('cash_received') || old('cash_received') !== null) ? 'cash' : 'mpesa';
+                        $payTab = ($errors->has('cash_received') || old('cash_received') !== null) ? 'cash' : 'mpesa'; if (old('credit_form') || $errors->has('credit')) $payTab = 'credit';
                         $t = (int) ceil($ticket->total);
                         $quick = collect([$t, (int) (ceil($t / 50) * 50), (int) (ceil($t / 100) * 100), (int) (ceil($t / 500) * 500), 1000, 2000])->filter(fn ($a) => $a >= $t)->unique()->take(4)->values();
                     @endphp
@@ -146,10 +148,12 @@
                         <span><span class="animate-pulse">&#9679;</span> With the kitchen @if ($sentAt) since {{ \Illuminate\Support\Carbon::parse($sentAt)->format('H:i') }} @endif</span>
                         <button type="button" onclick="printBill('{{ route('pos.tickets.bill', $ticket) }}')" class="font-semibold hover:underline">&#129534; Reprint bill</button>
                     </div>
-                    <div class="text-xs font-bold uppercase tracking-wider text-roast/60 mb-2">How is the customer paying?</div>
-                    <div class="grid grid-cols-2 gap-2 mb-3">
+                    @if ($isGlovo) @include('pos.partials.glovo-pay') @else
+<div class="text-xs font-bold uppercase tracking-wider text-roast/60 mb-2">How is the customer paying?</div>
+                    <div class="grid {{ $hasCredit ? 'grid-cols-3' : 'grid-cols-2' }} gap-2 mb-3">
                         <button type="button" data-paytab="mpesa" class="paytab rounded-2xl py-3 font-extrabold ring-2 bg-white ring-roast/15">&#128241; M-Pesa</button>
                         <button type="button" data-paytab="cash" class="paytab rounded-2xl py-3 font-extrabold ring-2 bg-white ring-roast/15">&#128181; Cash</button>
+@if ($hasCredit)<button type="button" data-paytab="credit" class="paytab rounded-2xl py-3 font-extrabold ring-2 bg-white ring-roast/15">&#128221; Credit</button>@endif
                     </div>
                     <div data-paypane="mpesa" class="{{ $payTab === 'mpesa' ? '' : 'hidden' }}">
                         @include('pos.partials.mpesa')
@@ -167,7 +171,9 @@
                             <button class="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-lg py-4 shadow-md">&#128181; Close bill (cash)</button>
                         </form>
                     </div>
-                    <div class="mt-3 text-center"><button type="button" onclick="document.getElementById('void-modal').classList.remove('hidden')" class="text-xs text-red-600 hover:underline">Cancel order&hellip;</button></div>
+                    @if ($hasCredit)<div data-paypane="credit" class="{{ $payTab === 'credit' ? '' : 'hidden' }}">@include('pos.partials.credit')</div>@endif
+@endif
+<div class="mt-3 text-center"><button type="button" onclick="document.getElementById('void-modal').classList.remove('hidden')" class="text-xs text-red-600 hover:underline">Cancel order&hellip;</button></div>
                     <div id="void-modal" class="{{ session('void_open') || $errors->has('manager_pin') || $errors->has('reason') ? '' : 'hidden' }} fixed inset-0 z-40 bg-black/50 flex items-end sm:items-center justify-center p-3">
                         <form method="POST" action="{{ route('pos.tickets.void', $ticket) }}" class="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl space-y-4">
                             @csrf
@@ -204,7 +210,7 @@
                             <div class="mt-2 text-sm">M-Pesa code <span class="font-mono font-bold text-lg tracking-wider">{{ $pay->kk_reference }}</span></div>
                             <div class="mt-1 inline-block text-xs font-semibold rounded-full px-3 py-1 {{ $vTone === 'ok' ? 'bg-white text-emerald-700' : 'bg-amber-200 text-amber-900' }}">{!! $vTone === 'ok' ? '&#10003;' : '&#9888;' !!} {{ $vLabel }}</div>
                         @elseif ($pay)
-                            <div class="mt-1 text-sm">Paid in cash</div>
+                            <div class="mt-1 text-sm">{{ $pay->method === 'credit' ? 'On account: ' . optional(optional($ticket->creditSale)->customer)->name : 'Paid in cash' }}</div>
                         @endif
                     </div>
                     <button type="button" onclick="printBill('{{ route('pos.tickets.bill', [$ticket, 'mode' => 'receipt']) }}')" class="w-full rounded-xl py-2.5 text-sm font-semibold bg-crema hover:bg-amber-50 ring-1 ring-roast/15 mb-2">&#129534; Print receipt</button>
@@ -260,5 +266,6 @@
     <script>window.addEventListener('load', function () { printBill(@json(session('print_bill'))); });</script>
 @endif
 @include('partials.touch')
+@include('partials.footer')
 </body>
 </html>

@@ -34,5 +34,6 @@
         </form>
     </div>
 @include('partials.touch')
+@include('partials.footer')
 </body>
 </html>

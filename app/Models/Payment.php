@@ -26,6 +26,9 @@ class Payment extends Model
         if ($this->method === 'cash') {
             return ['Cash', 'plain', null];
         }
+        if ($this->method === 'credit') {
+            return ['On account', 'plain', null];
+        }
         $event = $this->kk_reference ? KkEvent::where('reference', $this->kk_reference)->latest('id')->first() : null;
         if ($event) {
             $detail = 'Kopo Kopo received KSh ' . number_format((float) $event->amount, 2)

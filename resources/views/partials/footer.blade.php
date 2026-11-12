@@ -1,0 +1,1 @@
+<footer class="w-full py-3 text-center text-xs opacity-60 print:hidden">&copy; 2026 Tele Caf&eacute; POS &middot; Developed by <a href="https://masomoteletraining.co.ke" target="_blank" rel="noopener" class="font-semibold underline-offset-2 hover:underline">MTTI Eldoret</a></footer>

@@ -35,7 +35,7 @@ class PosController extends Controller
 
         return view('pos.index', [
             'ticket'     => null,
-            'categories' => $this->menu(),
+            'categories' => $this->menu(session('pos_channel', 'house')),
             'shift'      => $shift,
         ]);
     }
@@ -50,6 +50,7 @@ class PosController extends Controller
         $ticket = Ticket::create([
             'opened_by' => $user->id,
             'status'    => 'open',
+            ...(self::hasChannels() ? ['channel' => session('pos_channel') === 'glovo' ? 'glovo' : 'house'] : []),
             'opened_at' => now(),
         ]);
         return redirect()->route('pos.tickets.show', $ticket);
@@ -62,7 +63,7 @@ class PosController extends Controller
 
         return view('pos.index', [
             'ticket'     => $ticket,
-            'categories' => $this->menu(),
+            'categories' => $this->menu($ticket->channel ?? 'house'),
             'shift'      => Shift::currentFor($request->user()->id),
         ]);
     }
@@ -74,6 +75,9 @@ class PosController extends Controller
 
         $data = $request->validate(['item_id' => 'required|exists:items,id']);
         $item = Item::findOrFail($data['item_id']);
+        if (self::hasChannels() && ($item->category->channel ?? 'house') !== ($ticket->channel ?? 'house')) {
+            return $request->ajax() ? response()->json(['error' => 'That dish is on the other menu.'], 422) : back()->withErrors(['item' => 'That dish is on the other menu (Dine-in / Glovo).']);
+        }
 
         $line = $ticket->items()->where('item_id', $item->id)->whereNull('sent_at')->first();
         if ($line) {
@@ -248,9 +252,32 @@ class PosController extends Controller
         return $done;
     }
 
-    private function menu()
+    /** Dine-in / Glovo switch: picks the menu for the next order, and switches an open order that has no dishes yet. */
+    public function setChannel(Request $request)
+    {
+        $data = $request->validate(['channel' => ['required', 'in:house,glovo'], 'ticket_id' => ['nullable', 'integer']]);
+        $request->session()->put('pos_channel', $data['channel']);
+        if (! empty($data['ticket_id']) && self::hasChannels() && ($t = Ticket::find($data['ticket_id']))) {
+            $this->authorizeTicket($request, $t);
+            if ($t->status === 'open' && $t->items()->count() === 0) {
+                $t->update(['channel' => $data['channel']]);
+            } elseif (($t->channel ?? 'house') !== $data['channel']) {
+                return back()->withErrors(['channel' => 'This order already has dishes. Finish or cancel it to switch menus.']);
+            }
+        }
+        return back();
+    }
+
+    private static function hasChannels(): bool
+    {
+        static $has = null;
+        return $has ??= \Illuminate\Support\Facades\Schema::hasColumn('tickets', 'channel');
+    }
+
+    private function menu(string $channel = 'house')
     {
         return Category::where('active', true)
+            ->when(self::hasChannels(), fn ($q) => $q->where('channel', $channel))
             ->with(['items' => fn ($q) => $q->where('active', true)->orderBy('name')])
             ->orderBy('sort_order')->orderBy('name')->get();
     }

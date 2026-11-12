@@ -36,7 +36,7 @@
         <button type="button" data-cat="all" data-on="bg-espresso text-crema ring-espresso" class="cat-chip shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold bg-white ring-1 ring-roast/15 shadow-sm">&#11088; All</button>
         @foreach ($cats as $ci => $cat)
             @php $pc = $palette[$ci % count($palette)]; @endphp
-            <button type="button" data-cat="{{ $cat->id }}" data-on="{{ $pc['on'] }}" class="cat-chip shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold bg-white ring-1 ring-roast/15 shadow-sm">{!! $icon($cat->name) !!} {{ $cat->name }} <span class="opacity-60 font-normal">{{ $cat->items->count() }}</span></button>
+            <button type="button" data-cat="{{ $cat->id }}" data-on="{{ $pc['on'] }}" class="cat-chip shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold bg-white ring-1 ring-roast/15 shadow-sm">{!! $icon($cat->name) !!} {{ \Illuminate\Support\Str::after($cat->name, 'Glovo: ') }} <span class="opacity-60 font-normal">{{ $cat->items->count() }}</span></button>
         @endforeach
     </div>
 </div>
@@ -50,7 +50,7 @@
         @php $pc = $palette[$ci % count($palette)]; $catIcon = $icon($cat->name); @endphp
         <section class="menu-cat" data-cat="{{ $cat->id }}">
             <h2 class="flex items-center gap-2 font-display text-lg font-bold text-espresso mb-2">
-                <span class="w-8 h-8 rounded-xl grid place-items-center text-base {{ $pc['soft'] }}">{!! $catIcon !!}</span>{{ $cat->name }}
+                <span class="w-8 h-8 rounded-xl grid place-items-center text-base {{ $pc['soft'] }}">{!! $catIcon !!}</span>{{ \Illuminate\Support\Str::after($cat->name, 'Glovo: ') }}
             </h2>
             <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5">
                 @foreach ($cat->items as $item)
