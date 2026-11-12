@@ -73,6 +73,7 @@
         <div class="hidden md:flex items-center gap-2.5 mt-auto px-4 py-4 border-t border-white/10 text-sm">
             <span class="w-9 h-9 shrink-0 rounded-full bg-roast grid place-items-center font-bold">{{ strtoupper(mb_substr($me->name, 0, 1)) }}</span>
             <div class="min-w-0 flex-1"><div class="truncate font-semibold">{{ $me->name }}</div><div class="text-[11px] text-crema/50 capitalize">{{ $me->role }}</div></div>
+            @if ($me->role === 'manager')<a href="{{ route('manage.settings') }}" title="Settings" class="rounded-lg p-2 text-crema/80 hover:bg-white/10 hover:text-crema text-lg leading-none">&#9881;</a>@endif
             <form method="POST" action="{{ route('logout') }}">@csrf
                 <button class="rounded-lg p-2 text-red-200 hover:bg-red-500/20" title="Log out"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1 0 11.4 0"/></svg><span class="sr-only">Log out</span></button>
             </form>
