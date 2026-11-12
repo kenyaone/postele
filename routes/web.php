@@ -136,3 +136,8 @@ Route::middleware(['auth', 'role:stock,manager'])->prefix('stock')->name('stock.
     Route::get('/yield/rules/{rule}/edit',  [YieldController::class, 'edit'])->name('yield.rules.edit');
     Route::put('/yield/rules/{rule}',       [YieldController::class, 'update'])->name('yield.rules.update');
 });
+
+// Customer pays a bill from their own phone (QR on the bill). Public, one bill per secret link.
+Route::get('/p/{code}', [\App\Http\Controllers\PayController::class, 'show'])->middleware('throttle:60,1')->name('pay.show');
+Route::post('/p/{code}', [\App\Http\Controllers\PayController::class, 'send'])->middleware('throttle:6,1')->name('pay.send');
+Route::get('/p/{code}/status', [\App\Http\Controllers\PayController::class, 'status'])->middleware('throttle:90,1')->name('pay.status');

@@ -107,6 +107,7 @@ class Receipts
         if ($isBill) {
             $e->line('Pay at the counter.')
               ->line('M-Pesa Till ' . $till)
+                ->feed(1)->line('Scan to pay with M-Pesa:')->qr(\App\Http\Controllers\PayController::link($ticket), 6)
               ->line('(Not a receipt)');
         } else {
             $e->line('Thank you! Order again:')

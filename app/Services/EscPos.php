@@ -42,4 +42,13 @@ class EscPos
     public function cut(): self { $this->buf .= "\x1d\x56\x00"; return $this; }
 
     public function get(): string { return $this->buf; }
+
+    /** Native printer QR code (GS ( k), model 2, error level M. */
+    public function qr(string $data, int $size = 6): self
+    {
+        $len = strlen($data) + 3;
+        $this->buf .= "\x1d(k\x04\x00\x31\x41\x32\x00" . "\x1d(k\x03\x00\x31\x43" . chr(max(1, min(16, $size))) . "\x1d(k\x03\x00\x31\x45\x31"
+            . "\x1d(k" . chr($len % 256) . chr(intdiv($len, 256)) . "\x31\x50\x30" . $data . "\x1d(k\x03\x00\x31\x51\x30" . "\n";
+        return $this;
+    }
 }

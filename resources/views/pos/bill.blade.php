@@ -90,6 +90,9 @@
         @else
             <div class="c">Pay at the counter.</div>
             <div class="c b">M-Pesa Till {{ config('pos.till_number') }}</div>
+            <div class="c" style="margin-top:6px">Scan to pay with M-Pesa:</div><div id="payqr" style="display:flex;justify-content:center;margin:4px 0"></div>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+            <script>new QRCode(document.getElementById('payqr'), { text: @json(\App\Http\Controllers\PayController::link($ticket)), width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M });</script>
             <div class="c">(Not a receipt)</div>
         @endif
     </section>
