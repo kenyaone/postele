@@ -139,12 +139,17 @@
 
                         {{-- STATE-DRIVEN ACTIONS --}}
                         @if ($ticket->status === 'open')
-                            <form method="POST" action="{{ route('pos.tickets.send', $ticket) }}" class="mb-2">
+                            <form method="POST" action="{{ route('pos.tickets.send', $ticket) }}" class="mb-1">
                                 @csrf
+                                <input type="hidden" name="print_bill" value="1">
                                 <button {{ $ticket->items->isEmpty() ? 'disabled' : '' }}
                                         class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded py-3 disabled:opacity-40 disabled:cursor-not-allowed">
-                                    Send to kitchen
+                                    Send to kitchen + print bill
                                 </button>
+                            </form>
+                            <form method="POST" action="{{ route('pos.tickets.send', $ticket) }}" class="mb-2 text-center">
+                                @csrf
+                                <button {{ $ticket->items->isEmpty() ? 'disabled' : '' }} class="text-xs text-gray-500 hover:underline disabled:opacity-40">Send to kitchen only (no bill)</button>
                             </form>
                             <div class="mb-2">
                                 <button type="button" onclick="printBill('{{ route('pos.tickets.bill', $ticket) }}')"
@@ -214,5 +219,8 @@
             f.src = url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now();
         }
     </script>
+    @if (session('print_bill'))
+        <script>window.addEventListener('load', function () { printBill(@json(session('print_bill'))); });</script>
+    @endif
 </body>
 </html>

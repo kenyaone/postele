@@ -130,7 +130,12 @@ class PosController extends Controller
             ]);
         });
 
-        return redirect()->route('pos.tickets.show', $ticket)->with('ok', "Sent to kitchen \u{2014} KOT queued.");
+        $redirect = redirect()->route('pos.tickets.show', $ticket)->with('ok', "Sent to kitchen \u{2014} KOT queued.");
+        if ($request->boolean('print_bill')) {
+            // "Send + print bill": the POS page opens the bill print dialog as soon as it reloads.
+            $redirect->with('print_bill', route('pos.tickets.bill', $ticket));
+        }
+        return $redirect;
     }
 
     public function printBill(Request $request, Ticket $ticket)
