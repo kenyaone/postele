@@ -7,7 +7,7 @@
         ['Bill / receipt printer', $bill->isNotEmpty() ? 'ok' : 'todo', $bill->isNotEmpty() ? $bill->pluck('name')->implode(', ') : 'Add a printer with role Bills or Both.'],
         ['Kitchen (KOT) printer', $kot->isNotEmpty() ? 'ok' : 'todo', $kot->isNotEmpty() ? $kot->pluck('name')->implode(', ') : 'Add a printer with role Kitchen or Both.'],
         ['KOT station routing', $kot->isEmpty() ? 'todo' : ($uncovered->isEmpty() ? 'ok' : 'warn'), $kot->isEmpty() ? 'Add KOT printers first.' : ($uncovered->isEmpty() ? 'Every dish has a kitchen printer.' : 'No printer for: ' . $uncovered->map(fn ($s) => Printer::STATIONS[$s] ?? $s)->implode(', '))],
-        ['Print bridge for WiFi', $network->isEmpty() ? 'idle' : ($bridgeOk ? 'ok' : 'warn'), $network->isEmpty() ? 'Only needed for network printers.' : ($bridgeOk ? 'Running. Last check ' . $seenAt->diffForHumans() . '.' : ($seenAt ? 'Stopped. Last seen ' . $seenAt->diffForHumans() . '.' : 'Not started yet. See step below.'))],
+        ['Print bridge for WiFi', $network->isEmpty() ? 'idle' : ($bridgeOk ? 'ok' : 'warn'), $network->isEmpty() ? 'Needed for counter-PC or WiFi printers.' : ($bridgeOk ? 'Running. Last check ' . $seenAt->diffForHumans() . '.' : ($seenAt ? 'Stopped. Last seen ' . $seenAt->diffForHumans() . '.' : 'Not started yet. See step below.'))],
     ];
     $tone = ['ok' => 'bg-emerald-50 ring-emerald-200 text-emerald-900', 'todo' => 'bg-amber-50 ring-amber-200 text-amber-900', 'warn' => 'bg-red-50 ring-red-200 text-red-900', 'idle' => 'bg-gray-50 ring-gray-200 text-gray-700'];
     $icon = ['ok' => '&#10003;', 'todo' => '!', 'warn' => '!', 'idle' => '&#8211;'];
@@ -50,8 +50,8 @@
                     </div>
                 </div>
                 <div class="mt-3 flex flex-wrap gap-1.5 text-xs font-semibold">
-                    @if ($p->connection === 'network')
-                        <span class="rounded-full bg-blue-50 text-blue-800 px-2 py-1">WiFi / LAN {{ $p->ip }}:{{ $p->port }}</span>
+                    @if ($p->viaBridge())
+                        <span class="rounded-full bg-blue-50 text-blue-800 px-2 py-1">{{ $p->connection === 'usb' ? 'USB on counter PC: ' . $p->windows_name : 'WiFi / LAN ' . $p->ip . ':' . $p->port }}</span>
                     @else
                         <span class="rounded-full bg-gray-100 text-gray-700 px-2 py-1">USB / Bluetooth on the device</span>
                     @endif
@@ -59,10 +59,10 @@
                         <span class="rounded-full bg-amber-50 text-amber-800 px-2 py-1">KOT: {{ empty($p->stations) ? 'all dishes' : collect($p->stations)->map(fn ($s) => Printer::STATIONS[$s] ?? $s)->implode(', ') }}</span>
                     @endif
                     @if ($p->auto_receipt)<span class="rounded-full bg-emerald-50 text-emerald-800 px-2 py-1">Receipt after payment</span>@endif
-                    @if ($p->connection === 'network')<span class="rounded-full bg-gray-100 text-gray-700 px-2 py-1">{{ $p->printed_today }} printed today</span>@endif
+                    @if ($p->viaBridge())<span class="rounded-full bg-gray-100 text-gray-700 px-2 py-1">{{ $p->printed_today }} printed today</span>@endif
                 </div>
                 <div class="mt-4 flex gap-2">
-                    @if ($p->connection === 'network')
+                    @if ($p->viaBridge())
                         <form method="POST" action="{{ route('manage.printers.test', $p) }}" class="flex-1">@csrf<button class="w-full rounded-xl bg-espresso text-crema font-semibold py-2 text-sm hover:bg-roast">Test print</button></form>
                     @else
                         <a href="{{ route('manage.printers.testpage') }}" target="_blank" class="flex-1 text-center rounded-xl bg-espresso text-crema font-semibold py-2 text-sm hover:bg-roast">Test page</a>
@@ -82,7 +82,7 @@
     </div>
 
     <div class="bg-white rounded-2xl shadow ring-1 ring-black/5 p-4">
-        <h3 class="font-semibold">&#128225; Print bridge (for WiFi / network printers)</h3>
+        <h3 class="font-semibold">&#128225; Print bridge (for USB printers on the counter PC and WiFi printers)</h3>
         <p class="text-sm text-gray-600 mt-1">Phones can't talk to a WiFi printer directly, so one computer at the cafe passes slips from the POS to the printers. It must be on the same WiFi as the printers and stay switched on during service.</p>
         <ol class="mt-3 space-y-1 text-sm list-decimal pl-5">
             <li>On that computer, sign in here and download the bridge below.</li>
@@ -113,9 +113,10 @@
                 @endforeach
             </div></div>
         <div><span class="text-xs font-bold uppercase tracking-wider text-gray-500">How is it connected?</span>
-            <div class="mt-1 grid grid-cols-2 gap-1.5">
-                <label class="cursor-pointer"><input type="radio" name="connection" value="network" class="peer sr-only" @checked(old('connection', 'network') === 'network') onchange="pfSync()"><span class="block rounded-xl ring-1 ring-black/10 px-3 py-2.5 text-sm font-semibold text-center peer-checked:bg-espresso peer-checked:text-crema">WiFi / network cable</span></label>
-                <label class="cursor-pointer"><input type="radio" name="connection" value="device" class="peer sr-only" @checked(old('connection') === 'device') onchange="pfSync()"><span class="block rounded-xl ring-1 ring-black/10 px-3 py-2.5 text-sm font-semibold text-center peer-checked:bg-espresso peer-checked:text-crema">USB / Bluetooth</span></label>
+            <div class="mt-1 grid gap-1.5">
+                @foreach (Printer::CONNECTIONS as $k => $v)
+                    <label class="cursor-pointer"><input type="radio" name="connection" value="{{ $k }}" class="peer sr-only" @checked(old('connection', 'usb') === $k) onchange="pfSync()"><span class="block rounded-xl ring-1 ring-black/10 px-3 py-2.5 text-sm font-semibold peer-checked:bg-espresso peer-checked:text-crema">{{ $v }}</span></label>
+                @endforeach
             </div></div>
         <div id="pf-net" class="grid grid-cols-3 gap-2">
             <label class="col-span-2 block"><span class="text-xs font-bold uppercase tracking-wider text-gray-500">IP address</span>
@@ -124,6 +125,9 @@
                 <input name="port" id="pf-port" value="{{ old('port', 9100) }}" inputmode="numeric" class="mt-1 w-full border rounded-xl px-3 py-3 font-mono"></label>
             <p class="col-span-3 text-xs text-gray-500">Hold the printer's feed button while switching it on: it prints a self-test page showing its IP address.</p>
         </div>
+        <div id="pf-usb" class="hidden"><label class="block"><span class="text-xs font-bold uppercase tracking-wider text-gray-500">Printer name in Windows</span>
+            <input name="windows_name" id="pf-win" value="{{ old('windows_name') }}" maxlength="120" placeholder="e.g. POS-80" class="mt-1 w-full border rounded-xl px-3 py-3"></label>
+            <p class="text-xs text-gray-500 mt-1">Exactly as in Windows Settings &rarr; Printers. The bridge window lists the printers on that PC when it starts.</p></div>
         <p id="pf-dev" class="hidden text-xs text-gray-600 bg-gray-50 rounded-xl p-3">Pair or plug the printer into the phone or tablet and make it the default printer there. Slips open the device print dialog, as now.</p>
         <div id="pf-kot"><span class="text-xs font-bold uppercase tracking-wider text-gray-500">Kitchen tickets for (station routing)</span>
             <div class="mt-1 flex flex-wrap gap-1.5">
@@ -142,11 +146,12 @@
     var pfBase = @json(url('/manage/printers'));
     function pfSync() {
         var f = document.getElementById('printer-form');
-        var role = (f.querySelector('[name=role]:checked') || {}).value, net = (f.querySelector('[name=connection]:checked') || {}).value === 'network';
+        var role = (f.querySelector('[name=role]:checked') || {}).value, conn = (f.querySelector('[name=connection]:checked') || {}).value, net = conn === 'network', bridge = conn !== 'device';
         document.getElementById('pf-net').classList.toggle('hidden', !net);
-        document.getElementById('pf-dev').classList.toggle('hidden', net);
+        document.getElementById('pf-dev').classList.toggle('hidden', bridge);
+        document.getElementById('pf-usb').classList.toggle('hidden', conn !== 'usb');
         document.getElementById('pf-kot').classList.toggle('hidden', role === 'bill');
-        document.getElementById('pf-auto').classList.toggle('hidden', !net || role === 'kot');
+        document.getElementById('pf-auto').classList.toggle('hidden', !bridge || role === 'kot');
     }
     function openPrinter(p) {
         var f = document.getElementById('printer-form');
@@ -158,8 +163,9 @@
         document.getElementById('pf-name').value = p ? p.name : '';
         document.getElementById('pf-ip').value = p && p.ip ? p.ip : '';
         document.getElementById('pf-port').value = p ? p.port : 9100;
+        document.getElementById('pf-win').value = p && p.windows_name ? p.windows_name : '';
         f.querySelectorAll('[name=role]').forEach(function (r) { r.checked = r.value === (p ? p.role : 'both'); });
-        f.querySelectorAll('[name=connection]').forEach(function (r) { r.checked = r.value === (p ? p.connection : 'network'); });
+        f.querySelectorAll('[name=connection]').forEach(function (r) { r.checked = r.value === (p ? p.connection : 'usb'); });
         f.querySelectorAll('.pf-st').forEach(function (c) { c.checked = !p || !p.stations || p.stations.indexOf(c.value) > -1; });
         document.getElementById('pf-autor').checked = !!(p && p.auto_receipt);
         document.getElementById('pf-active').checked = !p || !!p.active;

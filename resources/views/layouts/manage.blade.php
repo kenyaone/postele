@@ -23,6 +23,7 @@
         main table thead { color: rgba(107, 63, 38, .8); }
         aside nav::-webkit-scrollbar { display: none; }
     </style>
+@include('partials.pwa')
 </head>
 <body class="font-sans text-espresso antialiased">
 @php

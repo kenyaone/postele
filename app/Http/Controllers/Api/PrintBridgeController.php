@@ -25,6 +25,8 @@ class PrintBridgeController extends Controller
                 'ip'           => $j->target?->ip,
                 'port'         => $j->target?->port ?? 9100,
                 'printer_name' => $j->target?->name,
+                'conn'         => $j->target?->connection,
+                'windows_name' => $j->target?->windows_name,
                 'payload_b64' => base64_encode($j->payload_bytes),
                 'tries'       => $j->tries,
                 'created_at'  => $j->created_at->toIso8601String(),

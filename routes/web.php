@@ -36,6 +36,8 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
     Route::get('/bills', [\App\Http\Controllers\Pos\BillsController::class, 'index'])->name('bills');
     Route::post('/channel', [PosController::class, 'setChannel'])->name('channel');
     Route::post('/tickets/{ticket}/credit', [\App\Http\Controllers\Pos\CreditController::class, 'store'])->name('tickets.credit');
+    Route::get('/tickets/{ticket}/print-status', [\App\Http\Controllers\Pos\PosController::class, 'printStatus'])->name('tickets.printstatus');
+    Route::post('/tickets/{ticket}/reprint', [\App\Http\Controllers\Pos\PosController::class, 'reprint'])->middleware('throttle:20,1')->name('tickets.reprint');
     Route::get('/history', [\App\Http\Controllers\Pos\HistoryController::class, 'index'])->name('history');
     Route::get('/debts', [\App\Http\Controllers\Pos\DebtsController::class, 'index'])->name('debts');
     Route::get('/debts/{customer}', [\App\Http\Controllers\Pos\DebtsController::class, 'show'])->name('debts.show');

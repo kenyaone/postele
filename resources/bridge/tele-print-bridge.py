@@ -15,6 +15,9 @@ print('Tele Cafe print bridge is running. Leave this open.')
 while True:
     try:
         for j in call('GET', '/jobs/pending').get('jobs', []):
+            if j.get('conn') == 'usb':
+                call('PATCH', '/jobs/%s' % j['id'], {'status': 'failed_attempt', 'error': 'USB printers need the Windows bridge'})
+                continue
             if not j.get('ip'):
                 continue
             status, err = 'sent', None

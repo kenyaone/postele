@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class PrintJob extends Model
 {
-    protected $fillable = ['printer','printer_id','payload_bytes','status','tries','sent_at','error'];
+    protected $fillable = ['printer','printer_id','ticket_id','kind','payload_bytes','status','tries','sent_at','error'];
 
     protected $casts = [
         'tries'   => 'integer',

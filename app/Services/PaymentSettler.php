@@ -28,7 +28,7 @@ class PaymentSettler
             ]);
             $t->update(['status' => 'paid', 'closed_at' => now()]);
 
-            app(\App\Services\PrintRouter::class)->cashier(app(Receipts::class)->buildReceipt($t->fresh(['items.item', 'opener']), $payment), true);
+            app(\App\Services\PrintRouter::class)->cashier(app(Receipts::class)->buildReceipt($t->fresh(['items.item', 'opener']), $payment), true, $t->id);
             return $payment;
         });
     }

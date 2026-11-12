@@ -23,7 +23,7 @@ class PrintersController extends Controller
         $bill = $active->filter(fn ($p) => $p->doesBill());
         $stations = Item::where('active', 1)->distinct()->pluck('station')->filter()->values();
         $uncovered = $kot->isEmpty() ? collect() : $stations->reject(fn ($s) => $kot->contains(fn ($p) => $p->handles($s)))->values();
-        $network = $active->where('connection', 'network');
+        $network = $active->filter(fn ($p) => $p->viaBridge());
         $seen = Cache::get('print_bridge_seen');
         $seenAt = $seen ? Carbon::createFromTimestamp($seen)->setTimezone(config('app.timezone')) : null;
         $bridgeOk = $seenAt && $seenAt->gt(now()->subMinutes(2));
@@ -53,7 +53,7 @@ class PrintersController extends Controller
 
     public function test(Printer $printer, PrintRouter $router)
     {
-        if ($printer->connection !== 'network') {
+        if (! $printer->viaBridge()) {
             return back()->with('ok', 'This printer prints through the device print dialog: use the test page button.');
         }
         $router->test($printer);
@@ -87,12 +87,13 @@ class PrintersController extends Controller
         $d = $request->validate([
             'name' => 'required|string|max:60',
             'role' => 'required|in:both,bill,kot',
-            'connection' => 'required|in:network,device',
+            'connection' => 'required|in:network,device,usb',
+            'windows_name' => 'nullable|required_if:connection,usb|string|max:120',
             'ip' => 'nullable|required_if:connection,network|ip',
             'port' => 'nullable|integer|between:1,65535',
             'stations' => 'nullable|array',
             'stations.*' => 'in:' . implode(',', array_keys(Printer::STATIONS)),
-        ], ['ip.required_if' => 'Type the printer\'s IP address (printed on its self-test page).']);
+        ], ['windows_name.required_if' => 'Type the printer name exactly as Windows shows it (the bridge window lists them).', 'ip.required_if' => 'Type the printer\'s IP address (printed on its self-test page).']);
         $network = $d['connection'] === 'network';
         $kot = in_array($d['role'], ['kot', 'both'], true);
         return [
@@ -100,9 +101,10 @@ class PrintersController extends Controller
             'role' => $d['role'],
             'connection' => $d['connection'],
             'ip' => $network ? $d['ip'] : null,
+            'windows_name' => $d['connection'] === 'usb' ? trim($d['windows_name']) : null,
             'port' => $network ? ($d['port'] ?? 9100) : 9100,
             'stations' => $kot && ! empty($d['stations']) && count($d['stations']) < count(Printer::STATIONS) ? array_values($d['stations']) : null,
-            'auto_receipt' => $network && $d['role'] !== 'kot' && $request->boolean('auto_receipt'),
+            'auto_receipt' => $d['connection'] !== 'device' && $d['role'] !== 'kot' && $request->boolean('auto_receipt'),
             'active' => $request->boolean('active'),
         ];
     }

@@ -4,6 +4,7 @@
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Shift &mdash; {{ config('pos.cafe_name') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+@include('partials.pwa')
 </head>
 <body class="bg-gray-100 p-6">
     <div class="max-w-2xl mx-auto">

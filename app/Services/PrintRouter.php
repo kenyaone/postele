@@ -9,21 +9,31 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Decides which printer gets which slip. Network printers get a queued job that the
- * print bridge (on a computer at the cafe) sends over WiFi. With no network printer for
- * a slip, things work as before: the device's own print dialog.
+ * Decides which printer gets which slip. Bridge printers (WiFi/network, or USB on the counter PC)
+ * get a queued job that the print bridge prints at the cafe, wherever the waiter is. With no bridge
+ * printer for a slip, things work as before: the device's own print dialog.
  */
 class PrintRouter
 {
     private ?Collection $net = null;
+    private static ?bool $linked = null;
 
     public function __construct(private Receipts $receipts) {}
 
     private function network(): Collection
     {
         return $this->net ??= Schema::hasTable('printers')
-            ? Printer::where('active', true)->where('connection', 'network')->whereNotNull('ip')->get()
+            ? Printer::where('active', true)->whereIn('connection', ['network', 'usb'])->get()
+                ->filter(fn ($p) => $p->connection === 'usb' ? (bool) $p->windows_name : (bool) $p->ip)->values()
             : collect();
+    }
+
+    private function job(string $printer, ?Printer $p, string $payload, ?int $ticketId, ?string $kind): void
+    {
+        $row = ['printer' => $printer, 'payload_bytes' => $payload, 'status' => 'pending'];
+        if ($p) $row['printer_id'] = $p->id;
+        if (self::$linked ??= Schema::hasColumn('print_jobs', 'ticket_id')) $row += ['ticket_id' => $ticketId, 'kind' => $kind];
+        PrintJob::create($row);
     }
 
     public function hasNetwork(string $what): bool
@@ -36,7 +46,7 @@ class PrintRouter
     {
         $lines ??= $ticket->items;
         if (! $this->hasNetwork('kot')) {
-            PrintJob::create(['printer' => 'kitchen', 'payload_bytes' => $this->receipts->buildKot($ticket), 'status' => 'pending']);
+            $this->job('kitchen', null, $this->receipts->buildKot($ticket), $ticket->id, 'kot');
             return;
         }
         foreach ($this->network()->filter(fn ($p) => $p->doesKot()) as $p) {
@@ -44,20 +54,20 @@ class PrintRouter
             if ($mine->isEmpty()) continue;
             $t = clone $ticket;
             $t->setRelation('items', $mine);
-            PrintJob::create(['printer' => 'kitchen', 'printer_id' => $p->id, 'payload_bytes' => $this->receipts->buildKot($t), 'status' => 'pending']);
+            $this->job('kitchen', $p, $this->receipts->buildKot($t), $ticket->id, 'kot');
         }
     }
 
-    /** Bills and shift reports; $autoReceipt = the receipt printed by itself after payment. */
-    public function cashier(string $payload, bool $autoReceipt = false): void
+    /** Bills, receipts and shift reports; $autoReceipt = the receipt printed by itself after payment. */
+    public function cashier(string $payload, bool $autoReceipt = false, ?int $ticketId = null, ?string $kind = null): void
     {
+        $kind ??= $autoReceipt ? 'receipt' : 'bill';
         if (! $this->hasNetwork('bill')) {
-            PrintJob::create(['printer' => 'cashier', 'payload_bytes' => $payload, 'status' => 'pending']);
+            $this->job('cashier', null, $payload, $ticketId, $kind);
             return;
         }
-        $printers = $this->network()->filter(fn ($p) => $p->doesBill() && (! $autoReceipt || $p->auto_receipt));
-        foreach ($printers as $p) {
-            PrintJob::create(['printer' => 'cashier', 'printer_id' => $p->id, 'payload_bytes' => $payload, 'status' => 'pending']);
+        foreach ($this->network()->filter(fn ($p) => $p->doesBill() && (! $autoReceipt || $p->auto_receipt)) as $p) {
+            $this->job('cashier', $p, $payload, $ticketId, $kind);
         }
     }
 
@@ -74,9 +84,9 @@ class PrintRouter
         $e = (new EscPos())->init()->align('center')->bold(true)->size(2, 2)->line('TEST PRINT')
             ->size(1, 1)->bold(false)->line(config('pos.cafe_name', 'Tele Cafe'))->line(str_repeat('-', 32))
             ->align('left')->line('Printer: ' . $p->name)->line('Role:    ' . (Printer::ROLES[$p->role] ?? $p->role))
-            ->line('Address: ' . $p->ip . ':' . $p->port)->line('Time:    ' . now()->format('d M Y H:i:s'))
+            ->line('Address: ' . $p->address())->line('Time:    ' . now()->format('d M Y H:i:s'))
             ->line(str_repeat('-', 32))->align('center')->line('If you can read this,')->line('the printer is working.')
             ->feed(4)->cut();
-        PrintJob::create(['printer' => $p->doesKot() && ! $p->doesBill() ? 'kitchen' : 'cashier', 'printer_id' => $p->id, 'payload_bytes' => $e->get(), 'status' => 'pending']);
+        $this->job($p->doesKot() && ! $p->doesBill() ? 'kitchen' : 'cashier', $p, $e->get(), null, 'test');
     }
 }

@@ -134,7 +134,7 @@ class PosController extends Controller
         // One counter printer: the POS page opens the print dialog on reload with the kitchen ticket
         // (and, for "Send + print bill", the bill straight after it in the same print job).
         $mode = $request->boolean('print_bill') ? 'both' : 'kot';
-        if ($mode === 'both' && app(\App\Services\PrintRouter::class)->hasNetwork('bill')) app(\App\Services\PrintRouter::class)->cashier($receipts->buildBill($ticket->fresh(['items.item', 'opener'])));
+        if ($mode === 'both' && app(\App\Services\PrintRouter::class)->hasNetwork('bill')) app(\App\Services\PrintRouter::class)->cashier($receipts->buildBill($ticket->fresh(['items.item', 'opener'])), false, $ticket->id, 'bill');
         return redirect()->route('pos.tickets.show', $ticket)
             ->with('ok', $mode === 'both' ? 'Sent to kitchen. Printing kitchen ticket and bill.' : 'Sent to kitchen. Printing kitchen ticket.')
             ->with('print_bill', ($bm = app(\App\Services\PrintRouter::class)->browserMode($mode)) ? route('pos.tickets.bill', [$ticket, 'mode' => $bm]) : null);
@@ -190,7 +190,7 @@ class PosController extends Controller
 
             $ticket->update(['status' => 'paid', 'closed_at' => now()]);
 
-            app(\App\Services\PrintRouter::class)->cashier($receipts->buildReceipt($ticket->fresh('items.item', 'opener'), $payment), true);
+            app(\App\Services\PrintRouter::class)->cashier($receipts->buildReceipt($ticket->fresh('items.item', 'opener'), $payment), true, $ticket->id);
         });
 
         $change = $data['cash_received'] - $total;
@@ -281,5 +281,31 @@ class PosController extends Controller
         $user = $request->user();
         if ($user->role === 'manager') return;
         abort_unless($ticket->opened_by === $user->id, 403, 'Not your ticket.');
+    }
+
+    /** What the cafe printers have done with this order's slips (for the waiter's "Printed" chip). */
+    public function printStatus(Request $request, Ticket $ticket)
+    {
+        $this->authorizeTicket($request, $ticket);
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('print_jobs', 'ticket_id')) return response()->json(['jobs' => []]);
+        $jobs = \App\Models\PrintJob::with('target')->where('ticket_id', $ticket->id)->whereNotNull('printer_id')
+            ->whereIn('kind', ['kot', 'bill', 'receipt'])->latest('id')->limit(8)->get()
+            ->map(fn ($j) => [
+                'kind' => $j->kind,
+                'status' => $j->status === 'pending' && $j->created_at->lt(now()->subMinutes(15)) ? 'failed' : $j->status,
+                'printer' => $j->target->name ?? '',
+                'at' => \Illuminate\Support\Carbon::parse($j->sent_at ?? $j->created_at)->format('H:i'),
+            ])->values();
+        return response()->json(['jobs' => $jobs]);
+    }
+
+    /** Print the kitchen ticket or the bill again at the cafe printer, from wherever the waiter is. */
+    public function reprint(Request $request, Ticket $ticket, \App\Services\Receipts $receipts, \App\Services\PrintRouter $router)
+    {
+        $this->authorizeTicket($request, $ticket);
+        $what = $request->validate(['what' => 'required|in:kot,bill'])['what'];
+        $ticket->load('items.item', 'opener');
+        $what === 'kot' ? $router->kot($ticket) : $router->cashier($receipts->buildBill($ticket), false, $ticket->id, 'bill');
+        return $request->ajax() ? response()->json(['ok' => true]) : back()->with('ok', $what === 'kot' ? 'Kitchen ticket sent to the printer.' : 'Bill sent to the printer.');
     }
 }

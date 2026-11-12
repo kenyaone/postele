@@ -25,6 +25,7 @@
         .pop { animation: pop .25s ease-out; }
         #cat-chips::-webkit-scrollbar { display: none; }
     </style>
+@include('partials.pwa')
 </head>
 <body class="font-sans text-espresso min-h-screen antialiased">
 <header class="bg-espresso text-crema sticky top-0 z-30 shadow-lg">
@@ -146,7 +147,7 @@
                     @endphp
                     <div class="flex items-center justify-between gap-2 text-sm bg-amber-50 text-amber-900 rounded-xl px-3 py-2 mb-3">
                         <span><span class="animate-pulse">&#9679;</span> With the kitchen @if ($sentAt) since {{ \Illuminate\Support\Carbon::parse($sentAt)->format('H:i') }} @endif</span>
-                        <button type="button" onclick="printBill('{{ route('pos.tickets.bill', $ticket) }}')" class="font-semibold hover:underline">&#129534; Reprint bill</button>
+                        @include('pos.partials.print-status')
                     </div>
                     @if ($isGlovo) @include('pos.partials.glovo-pay') @else
 <div class="text-xs font-bold uppercase tracking-wider text-roast/60 mb-2">How is the customer paying?</div>
