@@ -29,7 +29,7 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
     Route::post('/tickets/{ticket}/items',               [PosController::class, 'addItem'])->name('tickets.items.store');
     Route::patch('/tickets/{ticket}/items/{ticketItem}', [PosController::class, 'updateLine'])->name('tickets.items.update');
     Route::post('/tickets/{ticket}/send',                [PosController::class, 'sendToKitchen'])->name('tickets.send');
-    Route::post('/tickets/{ticket}/bill',                [PosController::class, 'printBill'])->name('tickets.bill');
+    Route::get('/tickets/{ticket}/bill',                 [PosController::class, 'printBill'])->name('tickets.bill');
     Route::post('/tickets/{ticket}/close',               [PosController::class, 'closeBill'])->name('tickets.close');
     Route::post('/tickets/{ticket}/void',                [PosController::class, 'voidTicket'])->name('tickets.void');
 

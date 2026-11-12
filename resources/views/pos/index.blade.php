@@ -146,13 +146,13 @@
                                     Send to kitchen
                                 </button>
                             </form>
-                            <form method="POST" action="{{ route('pos.tickets.bill', $ticket) }}" class="mb-2">
-                                @csrf
-                                <button {{ $ticket->items->isEmpty() ? 'disabled' : '' }}
+                            <div class="mb-2">
+                                <button type="button" onclick="printBill('{{ route('pos.tickets.bill', $ticket) }}')"
+                                        {{ $ticket->items->isEmpty() ? 'disabled' : '' }}
                                         class="w-full border border-gray-400 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded py-2 disabled:opacity-40 disabled:cursor-not-allowed">
                                     &#129534;&nbsp; Print bill
                                 </button>
-                            </form>
+                            </div>
                             <form method="POST" action="{{ route('pos.tickets.void', $ticket) }}"
                                   onsubmit="return confirm('Void this ticket?');">
                                 @csrf
@@ -163,13 +163,13 @@
                             <div class="bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm rounded p-2 mb-3">
                                 &#10003; Sent to kitchen &mdash; KOT queued
                             </div>
-                            <form method="POST" action="{{ route('pos.tickets.bill', $ticket) }}" class="mb-2">
-                                @csrf
-                                <button {{ $ticket->items->isEmpty() ? 'disabled' : '' }}
+                            <div class="mb-2">
+                                <button type="button" onclick="printBill('{{ route('pos.tickets.bill', $ticket) }}')"
+                                        {{ $ticket->items->isEmpty() ? 'disabled' : '' }}
                                         class="w-full border border-gray-400 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded py-2 disabled:opacity-40 disabled:cursor-not-allowed">
                                     &#129534;&nbsp; Print bill
                                 </button>
-                            </form>
+                            </div>
                             <form method="POST" action="{{ route('pos.tickets.close', $ticket) }}" class="space-y-2">
                                 @csrf
                                 <label class="text-sm font-medium">Cash received (KSh)</label>
@@ -203,5 +203,16 @@
             </aside>
         </div>
     </div>
+    <iframe id="bill-frame" title="bill" aria-hidden="true" style="position:absolute;width:0;height:0;border:0;"></iframe>
+    <script>
+        function printBill(url) {
+            var f = document.getElementById('bill-frame');
+            f.onload = function () {
+                try { f.contentWindow.focus(); f.contentWindow.print(); }
+                catch (e) { window.open(url, '_blank'); }
+            };
+            f.src = url + (url.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now();
+        }
+    </script>
 </body>
 </html>
