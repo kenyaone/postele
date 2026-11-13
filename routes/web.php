@@ -37,6 +37,8 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
     Route::post('/channel', [PosController::class, 'setChannel'])->name('channel');
     Route::post('/tickets/{ticket}/credit', [\App\Http\Controllers\Pos\CreditController::class, 'store'])->name('tickets.credit');
     Route::get('/find', [\App\Http\Controllers\Pos\PosController::class, 'find'])->name('find');
+    Route::get('/my-pin', [\App\Http\Controllers\Pos\MyPinController::class, 'edit'])->name('pin');
+    Route::post('/my-pin', [\App\Http\Controllers\Pos\MyPinController::class, 'update'])->middleware('throttle:6,1')->name('pin.update');
     Route::get('/tickets/{ticket}/print-status', [\App\Http\Controllers\Pos\PosController::class, 'printStatus'])->name('tickets.printstatus');
     Route::post('/tickets/{ticket}/reprint', [\App\Http\Controllers\Pos\PosController::class, 'reprint'])->middleware('throttle:20,1')->name('tickets.reprint');
     Route::get('/history', [\App\Http\Controllers\Pos\HistoryController::class, 'index'])->name('history');

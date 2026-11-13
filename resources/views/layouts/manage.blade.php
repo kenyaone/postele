@@ -34,6 +34,7 @@
         ['Point of Sale',    'pos.index',             '&#128722;', 'pos.*',               ['manager', 'cashier', 'waiter']],
         ['Bills', 'pos.bills', '&#129534;', 'pos.bills*', ['manager', 'cashier', 'waiter']],
         ['Order history', 'pos.history', '&#128338;', 'pos.history*', ['manager', 'cashier', 'waiter']],
+        ['Change my PIN', 'pos.pin', '&#128273;', 'pos.pin*', ['cashier', 'waiter']],
         ['Debts', 'pos.debts', '&#128221;', 'pos.debts*', ['manager', 'cashier', 'waiter']],
         ['M-Pesa payments', 'manage.mpesa', '&#128241;', 'manage.mpesa*', ['manager']],
         ['Cancelled orders', 'manage.voids', '&#10060;', 'manage.voids*', ['manager']],
