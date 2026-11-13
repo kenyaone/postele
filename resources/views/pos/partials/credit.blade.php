@@ -1,8 +1,9 @@
-@php $creditCustomers = \App\Models\Customer::where('is_platform', false)->orderBy('name')->get(['id', 'name', 'phone']); @endphp
+@php $creditCustomers = \App\Models\Customer::where('is_platform', false)->orderBy('name')->get(['id', 'name', 'phone'])->reject(fn ($c) => \App\Models\Customer::isPlaceholderName($c->name)); @endphp
 <form method="POST" action="{{ route('pos.tickets.credit', $ticket) }}" class="space-y-3">
     @csrf
     <input type="hidden" name="credit_form" value="1">
     <p class="text-sm text-roast/70">The customer takes the food now and pays later. It shows under <b>Debts</b> until paid.</p>
+    <p class="text-xs font-semibold text-orange-800 bg-orange-50 rounded-lg px-3 py-2">Only for a named person or office who will pay later. Walk-in and table customers pay now by cash or M-Pesa.</p>
     @if ($creditCustomers->isNotEmpty())
         <label class="block"><span class="text-xs font-bold uppercase tracking-wider text-roast/60">Customer who already has an account</span>
             <select name="customer_id" class="mt-1 w-full border rounded-xl px-3 py-3 bg-white" onchange="document.getElementById('credit-new').classList.toggle('hidden', this.value !== '')">
@@ -14,8 +15,8 @@
         </label>
     @endif
     <div id="credit-new" class="space-y-2 {{ old('customer_id') ? 'hidden' : '' }}">
-        <input name="name" maxlength="80" value="{{ old('name') }}" placeholder="Customer name" class="w-full border rounded-xl px-3 py-3">
-        <input name="phone" maxlength="20" value="{{ old('phone') }}" placeholder="Phone (optional)" data-keypad="phone" data-keypad-label="Customer phone" class="w-full border rounded-xl px-3 py-3">
+        <input name="name" maxlength="80" value="{{ old('name') }}" placeholder="Name, e.g. Mary - Eduventures" class="w-full border rounded-xl px-3 py-3">
+        <input name="phone" maxlength="20" value="{{ old('phone') }}" placeholder="Phone (needed)" data-keypad="phone" data-keypad-label="Customer phone" class="w-full border rounded-xl px-3 py-3">
     </div>
     <label class="block"><span class="text-xs font-bold uppercase tracking-wider text-roast/60">Promised to pay by (optional)</span>
         <input type="date" name="due_on" value="{{ old('due_on', now()->addDays(7)->toDateString()) }}" min="{{ now()->toDateString() }}" class="mt-1 w-full border rounded-xl px-3 py-3">

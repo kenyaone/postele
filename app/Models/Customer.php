@@ -27,4 +27,21 @@ class Customer extends Model
     {
         return round((float) $this->owed_total - (float) $this->paid_total - (float) $this->fees_total, 2);
     }
+
+    /**
+     * Names that are not a real person or office: "Table", "Table 4", "Customer", "Walk-in", "Guest", "Meza"...
+     * Credit is only for someone who can be chased for the money later.
+     */
+    public static function isPlaceholderName(?string $name): bool
+    {
+        $n = mb_strtolower(trim((string) $name));
+        $n = preg_replace('/[^a-z ]+/u', ' ', $n);           // drop digits and punctuation: "Table 4" -> "table"
+        $n = trim(preg_replace('/\s+/', ' ', $n));
+        if (mb_strlen(str_replace(' ', '', $n)) < 3) return true;
+        $words = ['table', 'tables', 'tbl', 'meza', 'customer', 'customers', 'mteja', 'wateja', 'client', 'walk in', 'walkin',
+                  'walk', 'guest', 'guests', 'cash', 'mpesa', 'm pesa', 'pesa', 'test', 'testing', 'unknown', 'none', 'name',
+                  'counter', 'takeaway', 'take away', 'credit', 'debt', 'deni', 'house', 'dine in', 'person', 'someone', 'mtu',
+                  'visitor', 'student', 'staff', 'waiter', 'later', 'pay later', 'tab'];
+        return in_array($n, $words, true);
+    }
 }
