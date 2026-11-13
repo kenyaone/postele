@@ -14,9 +14,12 @@ trait HasOrderNumber
     {
         static::creating(function ($t) {
             if (! (self::$hasDailyNo ??= Schema::hasColumn('tickets', 'daily_no'))) return;
+            // One number at a time, so two waiters starting orders together never get the same number.
+            \Illuminate\Support\Facades\DB::select("SELECT GET_LOCK('telepos_order_no', 5)");
             $day = $t->created_at ? Carbon::parse($t->created_at) : now();
             $t->daily_no = (int) static::whereBetween('created_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()])->max('daily_no') + 1;
         });
+        static::created(fn () => \Illuminate\Support\Facades\DB::select("SELECT RELEASE_LOCK('telepos_order_no')"));
     }
 
     public function getOrderNoAttribute(): string
