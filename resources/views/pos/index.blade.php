@@ -28,6 +28,7 @@
 @include('partials.pwa')
 </head>
 <body class="font-sans text-espresso min-h-screen antialiased">
+@include('partials.printer-alert')
 <header class="bg-espresso text-crema sticky top-0 z-30 shadow-lg">
     <div class="px-4 py-2.5 flex items-center gap-3">
         <a href="{{ route('pos.index') }}" class="flex items-center gap-2.5">

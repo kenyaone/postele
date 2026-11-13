@@ -78,8 +78,8 @@ class DashboardController extends Controller
             'yieldAlerts'  => app(\App\Services\YieldReport::class)->openAlerts(7),
             'openTickets'  => Ticket::whereIn('status', ['open', 'sent'])->count(),
             'openShifts'   => Shift::with('user')->whereNull('closed_at')->get(),
-            'printPending' => PrintJob::where('status', 'pending')->count(),
-            'printFailed'  => PrintJob::where('status', 'failed')->count(),
+            'printPending' => PrintJob::whereNotNull('printer_id')->where('status', 'pending')->where('created_at', '>=', now()->subMinutes(15))->count(),
+            'printFailed'  => PrintJob::whereNotNull('printer_id')->where('status', 'failed')->where('created_at', '>=', today())->count(),
         ]);
     }
 }

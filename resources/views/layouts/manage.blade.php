@@ -26,6 +26,7 @@
 @include('partials.pwa')
 </head>
 <body class="font-sans text-espresso antialiased">
+@include('partials.printer-alert')
 @php
     // [label, route, icon, active pattern, roles that see it]
     $nav = [

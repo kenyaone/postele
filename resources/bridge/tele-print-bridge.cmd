@@ -1,12 +1,16 @@
 <# : Tele Cafe print bridge - double-click to start. Keep this window open.
 @echo off
 title Tele Cafe print bridge
+set "TCSU=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\tele-print-bridge.cmd"
+if /I not "%~f0"=="%TCSU%" copy /Y "%~f0" "%TCSU%" >nul 2>&1 && echo This bridge will now also start by itself whenever this PC starts.
 powershell -NoProfile -ExecutionPolicy Bypass -Command "iex ((Get-Content -LiteralPath '%~f0') -join [Environment]::NewLine)"
 pause
 goto :eof
 #>
 $Api = '__API__'
 $H = @{ Authorization = 'Bearer __TOKEN__'; Accept = 'application/json' }
+$TeleMutex = New-Object System.Threading.Mutex($false, 'Local\TeleCafePrintBridge')
+if (-not $TeleMutex.WaitOne(0)) { Write-Host 'The print bridge is already running in another window. You can close this one.' -ForegroundColor Yellow; Start-Sleep -Seconds 8; exit }
 Add-Type -TypeDefinition @'
 using System; using System.Runtime.InteropServices;
 public class TeleRawPrint {
