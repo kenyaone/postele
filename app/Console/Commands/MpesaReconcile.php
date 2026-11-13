@@ -27,6 +27,8 @@ class MpesaReconcile extends Command
         if ($pending->isEmpty()) { $this->line('No unanswered prompts.'); return self::SUCCESS; }
         $token = $kk->token();
         foreach ($pending as $stk) {
+            if (! $stk->isLead()) continue;   // extra orders on one prompt are handled with the prompt itself
+            $group = $stk->group();
             try {
                 $r = Http::withToken($token)->acceptJson()->timeout(15)->get($stk->location);
                 if (! $r->successful()) { $this->warn("#{$stk->id}: Kopo Kopo said {$r->status()}"); continue; }
@@ -35,18 +37,18 @@ class MpesaReconcile extends Command
                 $res = $attr['event']['resource'] ?? null;
                 $ref = is_array($res) ? ($res['reference'] ?? null) : null;
                 if ($status === 'Success' && $ref) {
-                    $stk->update(['status' => 'success']);
+                    $group->each->update(['status' => 'success']);
                     if (! Payment::where('kk_reference', $ref)->exists() && $stk->ticket && $stk->ticket->status !== 'paid') {
-                        $settler->settle($stk->ticket, 'kk_stk', (float) $res['amount'], $ref, null);
+                        $settler->settleMany($group->pluck('ticket_id'), 'kk_stk', (float) $res['amount'], $ref, null);
                         KkEvent::where('reference', $ref)->update(['status' => 'matched']);
-                        $this->info("#{$stk->id}: paid {$ref}, bill {$stk->ticket->order_no} closed (webhook was missing)");
+                        $this->info("#{$stk->id}: paid {$ref}, " . $group->count() . " bill(s) closed (webhook was missing)");
                     }
                 } elseif ($status === 'Failed') {
                     $errors = (array) ($attr['event']['errors'] ?? []);
-                    $stk->update(['status' => 'failed', 'error' => mb_substr(implode('; ', $errors) ?: 'Payment was not completed.', 0, 300)]);
+                    $group->each->update(['status' => 'failed', 'error' => mb_substr(implode('; ', $errors) ?: 'Payment was not completed.', 0, 300)]);
                     $this->line("#{$stk->id}: not paid");
                 } elseif ($stk->created_at->lt(now()->subMinutes(30))) {
-                    $stk->update(['status' => 'failed', 'error' => 'No answer from the customer.']);
+                    $group->each->update(['status' => 'failed', 'error' => 'No answer from the customer.']);
                 }
             } catch (\Throwable $e) {
                 report($e);

@@ -24,21 +24,37 @@ class MpesaController extends Controller
         if (! $phone) return back()->withErrors(['phone' => 'Enter a mobile number like 0712 345 678.']);
         if (! KopoKopo::ready()) return back()->withErrors(['phone' => 'M-Pesa prompts are not switched on yet. Match a till payment or enter the code by hand.']);
 
-        $ticket->load('items');
-        $amount = (int) ceil($ticket->total);
+        // This order plus any others the customer is paying for (ticked, or typed as order numbers).
+        $bills = $this->billsFor($request, $ticket);
+        foreach (preg_split('/[\s,;]+/', (string) $request->input('orders', ''), -1, PREG_SPLIT_NO_EMPTY) as $no) {
+            $t = Ticket::findByOrderNo($no);
+            if (! $t) return back()->withInput()->withErrors(['phone' => "There is no order {$no}."]);
+            if (! in_array($t->status, ['open', 'sent'], true)) return back()->withInput()->withErrors(['phone' => "Order {$t->order_no} is already " . ($t->status === 'paid' ? 'paid' : 'closed') . '.']);
+            if (! $bills->contains('id', $t->id)) $bills->push($t->load('items'));
+        }
+        if ($bills->count() > 20) return back()->withInput()->withErrors(['phone' => 'One prompt can pay at most 20 orders.']);
+        $amount = (int) ceil($bills->sum(fn ($t) => $t->total));
+        if ($amount < 1) return back()->withInput()->withErrors(['phone' => 'Nothing to pay on ' . ($bills->count() > 1 ? 'these orders' : 'this order') . ' yet.']);
+
         $stk = StkRequest::create(['ticket_id' => $ticket->id, 'phone' => $phone, 'amount' => $amount, 'status' => 'pending', 'requested_by' => $request->user()->id]);
+        $extra = $bills->slice(1)->map(fn ($t) => StkRequest::create(['ticket_id' => $t->id, 'phone' => $phone, 'amount' => (int) ceil($t->total), 'status' => 'pending', 'requested_by' => $request->user()->id]));
 
         try {
             $location = $kk->stkPush($stk);
-            $stk->update(['location' => $location, 'kk_id' => basename((string) parse_url($location, PHP_URL_PATH))]);
+            $fields = ['location' => $location, 'kk_id' => basename((string) parse_url($location, PHP_URL_PATH))];
+            $stk->update($fields);
+            $extra->each->update($fields);
         } catch (\Throwable $e) {
             report($e);
             $stk->update(['status' => 'failed', 'error' => 'Could not reach Kopo Kopo.']);
+            $extra->each->update(['status' => 'failed', 'error' => 'Could not reach Kopo Kopo.']);
             return back()->withErrors(['phone' => 'Could not send the M-Pesa prompt. Try again, or use another way to pay.']);
         }
 
         return redirect()->route('pos.tickets.show', $ticket)
-            ->with('ok', 'M-Pesa prompt for KSh ' . number_format($amount) . ' sent to ' . $data['phone'] . '. Ask the customer to enter their PIN.');
+            ->with('ok', 'M-Pesa prompt for KSh ' . number_format($amount) . ' sent to ' . $data['phone']
+                . ($bills->count() > 1 ? ' for ' . $bills->count() . ' orders (' . $bills->map->order_no->implode(', ') . ')' : '')
+                . '. Ask the customer to enter their PIN.');
     }
 
     public function stkStatus(Request $request, Ticket $ticket)

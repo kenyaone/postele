@@ -83,18 +83,20 @@ class KopoKopoController extends Controller
             'reference' => $ref, 'received_at' => now(), 'status' => 'pending',
         ]);
 
+        $group = $stk ? $stk->group() : collect();   // one prompt can pay several orders
+
         if (($attr['status'] ?? '') !== 'Success' || ! $res || ! $ref) {
             $errors = (array) ($attr['event']['errors'] ?? []);
-            $stk?->update(['status' => 'failed', 'error' => mb_substr(implode('; ', $errors) ?: 'Payment was not completed.', 0, 300)]);
+            $group->each->update(['status' => 'failed', 'error' => mb_substr(implode('; ', $errors) ?: 'Payment was not completed.', 0, 300)]);
             $event->update(['status' => 'ignored']);
             return response()->json(['ok' => true]);
         }
 
-        $stk?->update(['status' => 'success']);
+        $group->each->update(['status' => 'success']);
         if (! $stk) return response()->json(['ok' => true]);   // unknown request: stays pending for the manager
 
         try {
-            $settler->settle($stk->ticket, 'kk_stk', (float) $res['amount'], $ref, null);
+            $settler->settleMany($group->pluck('ticket_id'), 'kk_stk', (float) $res['amount'], $ref, null);
             KkEvent::where('reference', $ref)->update(['status' => 'matched']);
         } catch (\Throwable $e) {
             if (! str_contains($e->getMessage(), 'already paid')) report($e);   // e.g. ticket already paid another way: event stays pending for review

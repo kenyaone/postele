@@ -32,20 +32,9 @@
         <div class="rounded-2xl bg-red-50 ring-1 ring-red-200 text-red-800 text-sm p-3">&#9888; The last prompt did not go through: {{ $stkLatest->error }}</div>
     @endif
 
-    <div class="rounded-2xl bg-white ring-1 ring-roast/10 p-3">
-        <div class="text-xs font-bold uppercase tracking-wider text-roast/60 mb-2"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-green-600 text-white mr-1">1</span> Send a prompt to their phone</div>
-        <form method="POST" action="{{ route('pos.tickets.mpesa.stk', $ticket) }}" class="flex gap-2">
-            @csrf
-            <input name="phone" inputmode="tel" data-keypad="phone" data-keypad-label="Customer phone" maxlength="13" required placeholder="07xx xxx xxx" value="{{ old('phone') }}" {{ $kkReady ? '' : 'disabled' }}
-                   class="flex-1 min-w-0 rounded-xl ring-1 ring-roast/20 px-3 py-3 text-lg tracking-wide focus:outline-none focus:ring-2 focus:ring-green-600">
-            <button {{ $kkReady ? '' : 'disabled' }} class="shrink-0 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold px-4 disabled:opacity-40">Send<span class="block text-xs font-medium opacity-90">KSh {{ number_format($billKsh) }}</span></button>
-        </form>
-        @unless ($kkReady)<p class="text-xs text-roast/60 mt-1">Phone prompts switch on once Kopo Kopo approves the app.</p>@endunless
-    </div>
-
     @if ($otherBills->isNotEmpty())
         <details class="rounded-2xl bg-white ring-1 ring-roast/10 p-3 text-sm" id="multiBills">
-            <summary class="cursor-pointer font-semibold text-roast/80">&#128101; One M-Pesa for several bills? Tick the other bills</summary>
+            <summary class="cursor-pointer font-semibold text-roast/80">&#128101; Customer paying for several orders? Tick them</summary>
             <div class="mt-2 space-y-1">
                 @foreach ($otherBills as $ob)
                     <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-green-50">
@@ -56,9 +45,23 @@
                 @endforeach
             </div>
             <div class="mt-2 rounded-lg bg-green-50 px-3 py-2 font-bold text-green-900">Together: KSh <span id="multiTotal">{{ number_format($billKsh) }}</span></div>
-            <p class="text-xs text-roast/60 mt-1">Then tap the customer's till payment below, or type their M-Pesa code. All ticked bills are paid with it.</p>
+            <p class="text-xs text-roast/60 mt-1">Then send the prompt, tap their till payment, or type their M-Pesa code. All ticked orders are paid with one M-Pesa.</p>
         </details>
     @endif
+
+    <div class="rounded-2xl bg-white ring-1 ring-roast/10 p-3">
+        <div class="text-xs font-bold uppercase tracking-wider text-roast/60 mb-2"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-green-600 text-white mr-1">1</span> Send a prompt to their phone</div>
+        <form method="POST" action="{{ route('pos.tickets.mpesa.stk', $ticket) }}" class="mp-pay flex flex-wrap gap-2">
+            @csrf
+            <input name="orders" value="{{ old('orders') }}" placeholder="Other orders too? e.g. 14, 15" {{ $kkReady ? '' : 'disabled' }}
+                   class="w-full rounded-xl ring-1 ring-roast/20 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-600">
+            <input name="phone" inputmode="tel" data-keypad="phone" data-keypad-label="Customer phone" maxlength="13" required placeholder="07xx xxx xxx" value="{{ old('phone') }}" {{ $kkReady ? '' : 'disabled' }}
+                   class="flex-1 min-w-0 rounded-xl ring-1 ring-roast/20 px-3 py-3 text-lg tracking-wide focus:outline-none focus:ring-2 focus:ring-green-600">
+            <button {{ $kkReady ? '' : 'disabled' }} class="shrink-0 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold px-4 disabled:opacity-40">Send<span class="block text-xs font-medium opacity-90">KSh <span id="stkAmt">{{ number_format($billKsh) }}</span></span></button>
+        </form>
+        @unless ($kkReady)<p class="text-xs text-roast/60 mt-1">Phone prompts switch on once Kopo Kopo approves the app.</p>@else<p class="text-xs text-roast/60 mt-1">Paying for other orders too? Type their order numbers (today's short number like 14 is enough), or tick them above. One prompt asks for the total.</p>@endunless
+    </div>
+
 
     <div class="rounded-2xl bg-white ring-1 ring-roast/10 p-3">
         <div class="flex items-center justify-between mb-2">
@@ -112,6 +115,7 @@
     function refresh() {
         var t = total(), el = document.getElementById('multiTotal');
         if (el) el.textContent = Math.round(t).toLocaleString();
+        var sa = document.getElementById('stkAmt'); if (sa) sa.textContent = Math.round(t).toLocaleString();
         document.querySelectorAll('.mp-pay button[data-amount]').forEach(function (btn) {
             var a = parseFloat(btn.dataset.amount), exact = Math.abs(a - t) < 0.01, enough = a + 0.004 >= t;
             btn.disabled = ! enough;
