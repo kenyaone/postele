@@ -56,7 +56,7 @@
 <div class="bg-white rounded shadow mb-6 ring-1 ring-orange-200">
     <div class="px-4 py-3 border-b flex flex-wrap justify-between gap-2 bg-orange-50">
         <h2 class="font-semibold text-orange-900">On credit &middot; not paid yet <span class="font-normal">({{ $credit->count() }})</span></h2>
-        <span class="font-semibold text-orange-900">KSh {{ number_format($credit->sum(fn ($t) => $t->total), 2) }} owed &middot; <a href="{{ route('pos.debts') }}" class="underline">Debts</a></span>
+        <span class="font-semibold text-orange-900">KSh {{ number_format($credit->sum(fn ($t) => $t->total), 2) }} owed &middot; <a href="{{ route('pos.debts') }}" class="underline">Debts</a>@if ($canOpenAll) &middot; <a href="{{ route('manage.credit-fix', ['date' => $date->toDateString()]) }}" class="underline font-bold">Fix: link to M-Pesa</a>@endif</span>
     </div>
     <div class="overflow-x-auto">
     <table class="w-full text-sm">
