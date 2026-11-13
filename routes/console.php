@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 // Nightly jobs (needs the cPanel cron: * * * * * php artisan schedule:run)
 \Illuminate\Support\Facades\Schedule::command('pos:daily-summary')->dailyAt('21:30')->timezone('Africa/Nairobi')->withoutOverlapping();
 \Illuminate\Support\Facades\Schedule::command('pos:backup')->dailyAt('21:40')->timezone('Africa/Nairobi')->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('pos:mpesa-reconcile')->everyMinute()->withoutOverlapping();

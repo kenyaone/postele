@@ -94,7 +94,7 @@ class KopoKopoController extends Controller
             $settler->settle($stk->ticket, 'kk_stk', (float) $res['amount'], $ref, null);
             KkEvent::where('reference', $ref)->update(['status' => 'matched']);
         } catch (\Throwable $e) {
-            report($e);   // e.g. ticket already paid another way: event stays pending for review
+            if (! str_contains($e->getMessage(), 'already paid')) report($e);   // e.g. ticket already paid another way: event stays pending for review
         }
         return response()->json(['ok' => true]);
     }
