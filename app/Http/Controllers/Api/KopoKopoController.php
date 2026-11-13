@@ -35,7 +35,10 @@ class KopoKopoController extends Controller
 
         $status = 'pending';
         if ($topic !== 'buygoods_transaction_received') $status = 'ignored';
-        elseif ($ref && Payment::where('kk_reference', $ref)->exists()) $status = 'matched';   // already paid via STK
+        elseif ($ref && Payment::where('kk_reference', $ref)->exists()) {
+            $status = 'matched';   // already paid via STK, or an older typed code that is now confirmed
+            Payment::where('kk_reference', $ref)->where('method', 'kk_till_manual')->update(['method' => 'kk_till_auto']);
+        }
 
         $tillEvent = KkEvent::create([
             'raw_payload' => $p,

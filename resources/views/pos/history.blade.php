@@ -2,7 +2,7 @@
 @section('title', 'Order history')
 @php
     $no = fn ($t) => '#' . $t->order_no;
-    $pill = ['paid' => ['Paid', 'bg-emerald-100 text-emerald-800'], 'open' => ['Taking order', 'bg-sky-100 text-sky-800'], 'sent' => ['With kitchen', 'bg-amber-100 text-amber-900'], 'void' => ['Cancelled', 'bg-gray-200 text-gray-700']];
+    $pill = ['paid' => ['Paid', 'bg-emerald-100 text-emerald-800'], 'open' => ['Taking order', 'bg-sky-100 text-sky-800'], 'sent' => ['With kitchen', 'bg-amber-100 text-amber-900'], 'void' => ['Cancelled', 'bg-gray-200 text-gray-700'], 'credit' => ['On credit', 'bg-orange-100 text-orange-800'], 'unverified' => ['Not confirmed', 'bg-red-100 text-red-800']];
     $how = ['cash' => 'Cash', 'kk_stk' => 'M-Pesa', 'kk_till_auto' => 'M-Pesa', 'kk_till_manual' => 'M-Pesa', 'credit' => 'On account'];
 @endphp
 
@@ -61,7 +61,8 @@
                     <td class="px-4 py-3">{{ $t->opener->name ?? '?' }}</td>
                     <td class="px-4 py-3 text-right">{{ $t->items->sum('qty') }}</td>
                     <td class="px-4 py-3 text-right font-bold tabular-nums">{{ number_format($t->total) }}</td>
-                    <td class="px-4 py-3"><span class="text-xs font-semibold rounded-full px-2.5 py-1 {{ $pill[$t->status][1] ?? 'bg-gray-100' }}">{{ $pill[$t->status][0] ?? $t->status }}</span></td>
+                    @php $pk = $t->status; if ($pk === 'paid') { $m = $t->payments->pluck('method'); if ($m->contains('kk_till_manual')) $pk = 'unverified'; elseif ($m->isNotEmpty() && $m->every(fn ($x) => $x === 'credit')) $pk = 'credit'; } @endphp
+                    <td class="px-4 py-3"><span class="text-xs font-semibold rounded-full px-2.5 py-1 {{ $pill[$pk][1] ?? 'bg-gray-100' }}">{{ $pill[$pk][0] ?? $t->status }}</span></td>
                     <td class="px-4 py-3 text-xs">
                         @foreach ($t->payments as $p)
                             <div>{{ $how[$p->method] ?? $p->method }}@if ($p->kk_reference) <span class="font-mono font-semibold">{{ $p->kk_reference }}</span>@endif</div>

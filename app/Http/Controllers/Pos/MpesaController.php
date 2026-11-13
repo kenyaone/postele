@@ -73,23 +73,29 @@ class MpesaController extends Controller
         $this->authorizeTicket($request, $ticket);
         $data = $request->validate([
             'code'   => ['required', 'regex:/^[A-Za-z0-9]{8,12}$/'],
-            'amount' => 'required|numeric|min:1|max:1000000',
         ], ['code.regex' => 'An M-Pesa code is 10 letters and numbers, e.g. QK12ABC3XY.']);
         $code = strtoupper($data['code']);
 
         $ticket->load('items');
-        if ((float) $data['amount'] + 0.004 < $ticket->total) {
-            return back()->withErrors(['mpesa' => 'KSh ' . number_format($data['amount'], 2) . ' is less than the bill of KSh ' . number_format($ticket->total, 2) . '.']);
-        }
 
-        $event = KkEvent::where('event_type', 'buygoods_transaction_received')->where('status', 'pending')->where('reference', $code)->first();
+        // A typed code is only accepted once Kopo Kopo has actually received that payment.
+        $event = KkEvent::where('event_type', 'buygoods_transaction_received')->where('reference', $code)->latest('id')->first();
+        if (! $event) {
+            return back()->withInput()->withErrors(['mpesa' => "Kopo Kopo has not received M-Pesa {$code} on Till " . config('pos.till_number') . ' yet. Check the code on the customer\'s SMS, wait a minute and try again. The bill stays unpaid until the money arrives.']);
+        }
+        if ($event->status !== 'pending') {
+            return back()->withInput()->withErrors(['mpesa' => "M-Pesa {$code} has already been used for another bill."]);
+        }
+        if ((float) $event->amount + 0.004 < $ticket->total) {
+            return back()->withInput()->withErrors(['mpesa' => "M-Pesa {$code} was KSh " . number_format((float) $event->amount) . ', less than the bill of KSh ' . number_format($ticket->total) . '.']);
+        }
         try {
-            $settler->settle($ticket, $event ? 'kk_till_auto' : 'kk_till_manual', (float) ($event->amount ?? $data['amount']), $code, $request->user()->id);
+            $settler->settle($ticket, 'kk_till_auto', (float) $event->amount, $code, $request->user()->id);
         } catch (RuntimeException $e) {
             return back()->withErrors(['mpesa' => $e->getMessage()]);
         }
-        $event?->update(['status' => 'matched']);
-        return redirect()->route('pos.tickets.show', $ticket)->with('ok', "M-Pesa {$code} recorded. Bill paid." . ($event ? ' (Confirmed by Kopo Kopo.)' : ''));
+        $event->update(['status' => 'matched']);
+        return redirect()->route('pos.tickets.show', $ticket)->with('ok', "M-Pesa {$code} confirmed by Kopo Kopo. Bill paid.");
     }
 
     private function authorizeTicket(Request $request, Ticket $ticket): void

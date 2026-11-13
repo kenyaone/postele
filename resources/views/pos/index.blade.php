@@ -202,11 +202,11 @@
                         </form>
                     </div>
                 @elseif ($ticket->status === 'paid')
-                    @php $pay = $ticket->payments()->latest('id')->first(); @endphp
-                    <div class="pop rounded-2xl bg-emerald-600 text-white p-5 text-center mb-3 shadow-lg">
-                        <div class="text-4xl leading-none">&#10003;</div>
-                        <div class="font-display text-2xl font-extrabold mt-1">PAID</div>
-                        <div class="text-sm opacity-90">Payment recorded</div>
+                    @php $pay = $ticket->payments()->latest('id')->first(); $onCredit = $pay && $pay->method === 'credit'; $unverified = $pay && $pay->method === 'kk_till_manual'; @endphp
+                    <div class="pop rounded-2xl {{ $onCredit ? 'bg-amber-500' : ($unverified ? 'bg-red-600' : 'bg-emerald-600') }} text-white p-5 text-center mb-3 shadow-lg">
+                        <div class="text-4xl leading-none">{!! $onCredit ? '&#128221;' : ($unverified ? '&#9888;' : '&#10003;') !!}</div>
+                        <div class="font-display text-2xl font-extrabold mt-1">{{ $onCredit ? 'ON CREDIT' : ($unverified ? 'NOT CONFIRMED' : 'PAID') }}</div>
+                        <div class="text-sm opacity-90">{{ $onCredit ? 'Not paid yet: it is in Debts until the customer pays' : ($unverified ? 'Kopo Kopo has not received this M-Pesa code' : 'Payment recorded') }}</div>
                         @if ($pay && $pay->kk_reference)
                             @php [$vLabel, $vTone] = $pay->verification(); @endphp
                             <div class="mt-2 text-sm">M-Pesa code <span class="font-mono font-bold text-lg tracking-wider">{{ $pay->kk_reference }}</span></div>

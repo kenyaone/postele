@@ -75,12 +75,11 @@
 
     <details class="rounded-2xl bg-white ring-1 ring-roast/10 p-3 text-sm" {{ $errors->has('mpesa') || $errors->has('code') ? 'open' : '' }}>
         <summary class="cursor-pointer font-semibold text-roast/80"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-roast/60 text-white text-xs mr-1">3</span> Not showing? Type the M-Pesa code</summary>
-        <form method="POST" action="{{ route('pos.tickets.mpesa.manual', $ticket) }}" class="grid grid-cols-2 gap-2 mt-3">
+        <form method="POST" action="{{ route('pos.tickets.mpesa.manual', $ticket) }}" class="grid grid-cols-1 gap-2 mt-3">
             @csrf
             <input name="code" required maxlength="12" value="{{ old('code') }}" placeholder="e.g. QK12ABC3XY" class="rounded-xl ring-1 ring-roast/20 px-3 py-2.5 uppercase font-mono">
-            <input type="number" name="amount" step="1" min="1" required value="{{ old('amount', $billKsh) }}" class="rounded-xl ring-1 ring-roast/20 px-3 py-2.5 text-right">
-            <button class="col-span-2 rounded-xl ring-2 ring-green-700 text-green-800 font-semibold py-2.5 hover:bg-green-50">Record M-Pesa payment</button>
-            <p class="col-span-2 text-xs text-roast/60">It will show &#9888; until Kopo Kopo confirms the code.</p>
+            <button class="rounded-xl ring-2 ring-green-700 text-green-800 font-semibold py-2.5 hover:bg-green-50">Check with Kopo Kopo</button>
+            <p class="text-xs text-roast/60">The bill is only marked paid once Kopo Kopo has received this payment on Till {{ config('pos.till_number') }}.</p>
         </form>
     </details>
 </div>
