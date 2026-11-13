@@ -83,6 +83,62 @@ class ReportController extends Controller
         ));
     }
 
+    /** Waiter performance: one row per waiter for the chosen dates. */
+    public function staff(Request $request)
+    {
+        [$from, $to, $preset] = $this->range($request);
+        $fromDt = $from->copy()->startOfDay();
+        $toDt   = $to->copy()->endOfDay();
+
+        $tickets = Ticket::whereBetween('created_at', [$fromDt, $toDt])->get(['id', 'opened_by', 'status', 'opened_at', 'closed_at', 'created_at']);
+        $ids     = $tickets->pluck('id');
+        $pays    = Payment::whereIn('ticket_id', $ids)->get(['ticket_id', 'method', 'amount'])->groupBy('ticket_id');
+        $credits = \Illuminate\Support\Facades\DB::table('credit_sales')->whereIn('ticket_id', $ids)->pluck('amount', 'ticket_id');
+        $shifts  = \App\Models\Shift::whereNotNull('closed_at')->whereBetween('closed_at', [$fromDt, $toDt])->get();
+        $sr      = app(\App\Services\ShiftReports::class);
+        $userIds = $tickets->pluck('opened_by')->merge($shifts->pluck('user_id'))->filter()->unique();
+        $names   = \App\Models\User::whereIn('id', $userIds)->pluck('name', 'id');
+
+        $rows = [];
+        foreach ($userIds as $uid) {
+            $mine = $tickets->where('opened_by', $uid);
+            $paid = $mine->where('status', 'paid');
+            $r = ['name' => $names[$uid] ?? ('#' . $uid), 'bills' => $mine->count(), 'paid' => $paid->count(),
+                  'cash' => 0.0, 'mpesa' => 0.0, 'other' => 0.0, 'credit' => 0.0, 'mins' => [],
+                  'voids' => $mine->where('status', 'void')->count(), 'open' => $mine->where('status', 'open')->count(), 'variance' => null];
+            foreach ($mine as $t) {
+                foreach ($pays[$t->id] ?? [] as $p) {
+                    $k = $p->method === 'cash' ? 'cash' : (str_starts_with((string) $p->method, 'kk') ? 'mpesa' : 'other');
+                    $r[$k] += (float) $p->amount;
+                }
+                $r['credit'] += (float) ($credits[$t->id] ?? 0);
+                if ($t->status === 'paid' && $t->closed_at) {
+                    $start = Carbon::parse($t->opened_at ?? $t->created_at);
+                    $r['mins'][] = abs($start->diffInSeconds(Carbon::parse($t->closed_at))) / 60;
+                }
+            }
+            foreach ($shifts->where('user_id', $uid) as $s) {
+                $exp = (float) ($sr->compute($s)['cashExpected'] ?? 0);
+                $r['variance'] = ($r['variance'] ?? 0) + (float) $s->cash_declared - $exp;
+            }
+            $r['sales']    = $r['cash'] + $r['mpesa'] + $r['other'] + $r['credit'];
+            $r['avg']      = $r['paid'] ? $r['sales'] / max(1, $r['paid'] + ($r['credit'] > 0 ? 0 : 0)) : 0;
+            $r['voidPct']  = $r['bills'] ? round(100 * $r['voids'] / $r['bills']) : 0;
+            $r['avgMins']  = $r['mins'] ? round(array_sum($r['mins']) / count($r['mins'])) : null;
+            unset($r['mins']);
+            $rows[] = $r;
+        }
+        usort($rows, fn ($a, $b) => $b['sales'] <=> $a['sales']);
+
+        if ($request->query('export') === 'csv') {
+            return $this->csv("tele-cafe-waiters-{$from->toDateString()}-to-{$to->toDateString()}.csv",
+                ['Waiter', 'Bills', 'Paid bills', 'Sales', 'Average bill', 'Cash', 'M-Pesa', 'Other', 'Credit', 'Voids', 'Void %', 'Still open', 'Avg minutes to pay', 'Cash short(-)/over(+)'],
+                array_map(fn ($r) => [$r['name'], $r['bills'], $r['paid'], $r['sales'], round($r['avg']), $r['cash'], $r['mpesa'], $r['other'], $r['credit'], $r['voids'], $r['voidPct'], $r['open'], $r['avgMins'], $r['variance']], $rows));
+        }
+
+        return view('manage.staff-performance', compact('rows', 'from', 'to', 'preset'));
+    }
+
     private function range(Request $request): array
     {
         $today = now()->startOfDay();

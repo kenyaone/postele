@@ -89,6 +89,7 @@ Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->
     Route::delete('/expenses/{expense}',    [ExpenseController::class, 'destroy'])->name('expenses.destroy');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports');
+    Route::get('/reports/waiters', [ReportController::class, 'staff'])->name('reports.staff');
 
     Route::get('/hr',                         [HrController::class, 'index'])->name('hr');
     Route::post('/hr/staff',                  [HrController::class, 'storeStaff'])->name('hr.staff.store');
