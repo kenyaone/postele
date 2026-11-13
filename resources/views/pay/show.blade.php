@@ -9,8 +9,8 @@
 <body class="min-h-screen bg-[#f7efe4] text-[#2b1b14]">
 <div class="max-w-md mx-auto p-4">
     <div class="rounded-3xl bg-[#2b1b14] text-[#f7efe4] p-5 text-center">
-        <img src="/icons/icon-192.png" alt="" class="w-14 h-14 mx-auto rounded-2xl">
-        <div class="mt-2 text-xl font-extrabold">{{ config('pos.cafe_name') }}</div>
+        <img src="{{ config('pos.logo') ?: '/icons/icon-192.png' }}" alt="" class="w-14 h-14 mx-auto rounded-2xl">
+        <div class="mt-2 text-xl font-extrabold">{{ config('pos.cafe_name') }}</div>@if (config('pos.address'))<div class="text-xs opacity-80">{{ config('pos.address') }}</div>@endif
         <div class="text-sm opacity-80">Bill {{ $t->order_no }}</div>
     </div>
 

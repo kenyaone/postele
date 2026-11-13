@@ -64,7 +64,8 @@
 
 @if (! in_array($mode, ['kot', 'cancel'], true))
     <section class="slip">
-        <div class="c b big">{{ config('pos.cafe_name') }}</div>
+        @if (config('pos.logo'))<div class="c"><img src="{{ config('pos.logo') }}" alt="" style="max-width:40mm;max-height:22mm;filter:grayscale(1)"></div>@endif
+        <div class="c b big">{{ config('pos.cafe_name') }}</div>@if (config('pos.address'))<div class="c">{{ config('pos.address') }}</div>@endif
         <div class="c">Till {{ config('pos.till_number') }}@if (config('pos.phone')) &middot; {{ config('pos.phone') }}@endif</div>
         <hr>
         <div class="c b">{!! $mode === 'receipt' ? 'RECEIPT' : 'BILL &mdash; PLEASE PAY' !!}</div>

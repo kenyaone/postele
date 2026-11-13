@@ -51,4 +51,35 @@ class EscPos
             . "\x1d(k" . chr($len % 256) . chr(intdiv($len, 256)) . "\x31\x50\x30" . $data . "\x1d(k\x03\x00\x31\x51\x30" . "\n";
         return $this;
     }
+
+    public function lineIf(?string $s): self { return $s ? $this->line($s) : $this; }
+
+    /** Print the cafe logo as a black-and-white picture (GS v 0), when switched on in Settings. */
+    public function logo(int $width = 256): self
+    {
+        $p = config('pos.logo');
+        if (! config('pos.print_logo') || ! $p) return $this;
+        $f = public_path(ltrim($p, '/'));
+        $src = is_file($f) ? @imagecreatefromstring((string) file_get_contents($f)) : false;
+        if (! $src) return $this;
+        $w = imagesx($src); $h = imagesy($src);
+        $nw = min($width, $w); $nw -= $nw % 8; if ($nw < 8) return $this;
+        $nh = max(1, (int) round($h * $nw / $w));
+        $img = imagecreatetruecolor($nw, $nh);
+        imagefill($img, 0, 0, imagecolorallocate($img, 255, 255, 255));
+        imagecopyresampled($img, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        $bytes = ''; $wb = intdiv($nw, 8);
+        for ($y = 0; $y < $nh; $y++) {
+            for ($x = 0; $x < $wb; $x++) {
+                $b = 0;
+                for ($bit = 0; $bit < 8; $bit++) {
+                    $c = imagecolorat($img, $x * 8 + $bit, $y);
+                    if ((($c >> 16 & 255) * 0.3 + ($c >> 8 & 255) * 0.59 + ($c & 255) * 0.11) < 140) $b |= 0x80 >> $bit;
+                }
+                $bytes .= chr($b);
+            }
+        }
+        $this->buf .= "\x1d\x76\x30\x00" . chr($wb % 256) . chr(intdiv($wb, 256)) . chr($nh % 256) . chr(intdiv($nh, 256)) . $bytes . "\n";
+        return $this;
+    }
 }

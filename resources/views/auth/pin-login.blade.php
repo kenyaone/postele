@@ -9,7 +9,8 @@
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
     <div class="w-full max-w-md bg-white rounded-xl shadow p-8">
-        <h1 class="text-2xl font-bold text-center">{{ config('pos.cafe_name') }} POS</h1>
+        @if (config('pos.logo'))<img src="{{ config('pos.logo') }}" alt="" class="w-20 h-20 mx-auto mb-3 rounded-3xl object-cover shadow">@endif
+        <h1 class="text-2xl font-bold text-center">{{ config('pos.cafe_name') }} POS</h1>@if (config('pos.address'))<p class="text-center text-sm opacity-70">{{ config('pos.address') }}</p>@endif
         <p class="text-center text-gray-500 mb-6">Sign in</p>
 
         @if ($errors->any())

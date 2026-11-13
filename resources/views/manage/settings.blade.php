@@ -4,7 +4,7 @@
 @section('content')
 <div class="max-w-xl">
 
-        <form method="POST" action="{{ route('manage.settings.update') }}" class="bg-white rounded-xl shadow p-6 space-y-4">
+        <form method="POST" action="{{ route('manage.settings.update') }}" enctype="multipart/form-data" class="bg-white rounded-xl shadow p-6 space-y-4">
             @csrf @method('PATCH')
             <p class="text-sm text-gray-500">These print on bills, receipts and X/Z reports.</p>
 
@@ -27,6 +27,22 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp link (receipt footer)</label>
                 <input name="thank_you_wa" maxlength="60" value="{{ old('thank_you_wa', $values['thank_you_wa']) }}"
                        class="w-full border rounded px-3 py-2">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Location / address (on bills and the pay page)</label>
+                <input name="address" maxlength="80" value="{{ old('address', config('pos.address')) }}" placeholder="e.g. Sagaas Centre, Eldoret" class="w-full border rounded px-3 py-2">
+            </div>
+            <div class="rounded-xl bg-gray-50 p-3 space-y-2">
+                <label class="block text-sm font-medium text-gray-700">Cafe logo</label>
+                <div class="flex items-center gap-3">
+                    @if (config('pos.logo'))<img src="{{ config('pos.logo') }}" alt="" class="w-16 h-16 rounded-2xl object-cover bg-white shadow">@else<span class="w-16 h-16 rounded-2xl bg-saffron grid place-items-center text-2xl">&#9749;</span>@endif
+                    <input type="file" name="logo" accept="image/png,image/jpeg,image/webp" class="text-sm">
+                </div>
+                @error('logo')<p class="text-sm text-red-700">{{ $message }}</p>@enderror
+                <p class="text-xs text-gray-500">PNG or JPG, square works best. Shown on the POS, sign-in, bills on screen and the customer pay page.</p>
+                @if (config('pos.logo'))<label class="flex items-center gap-2 text-sm"><input type="checkbox" name="remove_logo" value="1"> Remove the logo</label>@endif
+                <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="print_logo" value="1" @checked(old('print_logo', config('pos.print_logo')))> Also print the logo on thermal bills (uses a little more paper)</label>
             </div>
 
             <button class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded py-3">Save settings</button>

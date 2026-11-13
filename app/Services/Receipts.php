@@ -53,10 +53,11 @@ class Receipts
         $wa    = config('pos.thank_you_wa');
         $isBill = $payment === null;
 
-        $e = (new EscPos())->init()
+        $e = (new EscPos())->init()->align('center')->logo()
             ->align('center')->bold(true)->size(2, 2)
             ->line($cafe)
             ->size(1, 1)->bold(false)
+            ->lineIf(config('pos.address'))
             ->line("Till $till" . ($phone ? "  \u{00B7}  $phone" : ""))
             ->line(str_repeat('-', self::WIDTH));
 

@@ -1,0 +1,1 @@
+@if (config('pos.logo'))<img src="{{ config('pos.logo') }}" alt="" class="w-10 h-10 rounded-2xl object-cover bg-white shadow shrink-0">@else<span class="w-10 h-10 rounded-2xl bg-saffron text-espresso grid place-items-center text-xl shadow">&#9749;</span>@endif

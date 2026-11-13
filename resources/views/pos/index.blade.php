@@ -32,7 +32,7 @@
 <header class="bg-espresso text-crema sticky top-0 z-30 shadow-lg">
     <div class="px-4 py-2.5 flex items-center gap-3">
         <a href="{{ route('pos.index') }}" class="flex items-center gap-2.5">
-            <span class="w-10 h-10 rounded-2xl bg-saffron text-espresso grid place-items-center text-xl shadow">&#9749;</span>
+            @include('partials.brand-mark')
             <span class="leading-none"><span class="font-display text-xl font-extrabold tracking-tight">{{ config('pos.cafe_name') }}</span><span class="block text-[11px] text-crema/60 tracking-wider uppercase mt-0.5">Point of sale</span></span>
         </a>
         @isset($shift)

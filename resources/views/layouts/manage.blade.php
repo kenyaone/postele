@@ -54,7 +54,7 @@
 <div class="min-h-screen md:flex">
     <aside class="bg-espresso text-crema md:w-60 md:shrink-0 md:h-screen md:sticky md:top-0 flex flex-col shadow-xl z-20">
         <a href="{{ route('home') }}" class="px-4 pt-4 pb-3 flex items-center gap-2.5">
-            <span class="w-10 h-10 rounded-2xl bg-saffron text-espresso grid place-items-center text-xl shadow">&#9749;</span>
+            @include('partials.brand-mark')
             <span class="leading-tight"><span class="block font-display text-lg font-extrabold">{{ config('pos.cafe_name') }}</span><span class="block text-[11px] uppercase tracking-wider text-crema/50">Back office</span></span>
         </a>
         <nav class="flex md:flex-col md:flex-1 md:min-h-0 gap-1 px-2 pb-3 overflow-x-auto md:overflow-y-auto md:overflow-x-visible">
