@@ -55,17 +55,18 @@ class MpesaController extends Controller
         $event = KkEvent::where('id', $data['event_id'])->where('event_type', 'buygoods_transaction_received')->where('status', 'pending')->first();
         if (! $event) return back()->withErrors(['mpesa' => 'That M-Pesa payment is no longer available. It may already be matched.']);
 
-        $ticket->load('items');
-        if ((float) $event->amount + 0.004 < $ticket->total) {
-            return back()->withErrors(['mpesa' => 'KSh ' . number_format($event->amount, 2) . ' is less than the bill of KSh ' . number_format($ticket->total, 2) . '.']);
+        $bills = $this->billsFor($request, $ticket);
+        $sum   = (float) $bills->sum(fn ($t) => $t->total);
+        if ((float) $event->amount + 0.004 < $sum) {
+            return back()->withErrors(['mpesa' => 'KSh ' . number_format($event->amount) . ' is less than ' . ($bills->count() > 1 ? 'the ' . $bills->count() . ' bills together' : 'the bill') . ' (KSh ' . number_format($sum) . ').']);
         }
         try {
-            $settler->settle($ticket, 'kk_till_auto', (float) $event->amount, $event->reference, $request->user()->id);
+            $settler->settleMany($bills, 'kk_till_auto', (float) $event->amount, $event->reference, $request->user()->id);
         } catch (RuntimeException $e) {
             return back()->withErrors(['mpesa' => $e->getMessage()]);
         }
         $event->update(['status' => 'matched']);
-        return redirect()->route('pos.tickets.show', $ticket)->with('ok', "M-Pesa {$event->reference} matched. Bill paid.");
+        return redirect()->route('pos.tickets.show', $ticket)->with('ok', "M-Pesa {$event->reference} matched. " . ($bills->count() > 1 ? $bills->count() . ' bills paid: ' . $bills->map->order_no->implode(', ') : 'Bill paid.'));
     }
 
     public function manual(Request $request, Ticket $ticket, PaymentSettler $settler)
@@ -76,7 +77,8 @@ class MpesaController extends Controller
         ], ['code.regex' => 'An M-Pesa code is 10 letters and numbers, e.g. QK12ABC3XY.']);
         $code = strtoupper($data['code']);
 
-        $ticket->load('items');
+        $bills = $this->billsFor($request, $ticket);
+        $sum   = (float) $bills->sum(fn ($t) => $t->total);
 
         // A typed code is only accepted once Kopo Kopo has actually received that payment.
         $event = KkEvent::where('event_type', 'buygoods_transaction_received')->where('reference', $code)->latest('id')->first();
@@ -86,16 +88,25 @@ class MpesaController extends Controller
         if ($event->status !== 'pending') {
             return back()->withInput()->withErrors(['mpesa' => "M-Pesa {$code} has already been used for another bill."]);
         }
-        if ((float) $event->amount + 0.004 < $ticket->total) {
-            return back()->withInput()->withErrors(['mpesa' => "M-Pesa {$code} was KSh " . number_format((float) $event->amount) . ', less than the bill of KSh ' . number_format($ticket->total) . '.']);
+        if ((float) $event->amount + 0.004 < $sum) {
+            return back()->withInput()->withErrors(['mpesa' => "M-Pesa {$code} was KSh " . number_format((float) $event->amount) . ', less than ' . ($bills->count() > 1 ? 'the ' . $bills->count() . ' bills together' : 'the bill') . ' (KSh ' . number_format($sum) . ').']);
         }
         try {
-            $settler->settle($ticket, 'kk_till_auto', (float) $event->amount, $code, $request->user()->id);
+            $settler->settleMany($bills, 'kk_till_auto', (float) $event->amount, $code, $request->user()->id);
         } catch (RuntimeException $e) {
             return back()->withErrors(['mpesa' => $e->getMessage()]);
         }
         $event->update(['status' => 'matched']);
-        return redirect()->route('pos.tickets.show', $ticket)->with('ok', "M-Pesa {$code} confirmed by Kopo Kopo. Bill paid.");
+        return redirect()->route('pos.tickets.show', $ticket)->with('ok', "M-Pesa {$code} confirmed by Kopo Kopo. " . ($bills->count() > 1 ? $bills->count() . ' bills paid: ' . $bills->map->order_no->implode(', ') : 'Bill paid.'));
+    }
+
+    /** This bill plus any other unpaid bills ticked as "paid with the same M-Pesa". */
+    private function billsFor(Request $request, Ticket $ticket)
+    {
+        $ids = collect((array) $request->input('also', []))->map(fn ($v) => (int) $v)->filter()->reject(fn ($id) => $id === $ticket->id)->unique()->take(20);
+        $others = Ticket::with('items')->whereIn('id', $ids)->whereIn('status', ['open', 'sent'])->get()
+            ->filter(fn ($t) => $request->user()->role === 'manager' || $t->opened_by === $request->user()->id);
+        return collect([$ticket->load('items')])->merge($others)->values();
     }
 
     private function authorizeTicket(Request $request, Ticket $ticket): void
