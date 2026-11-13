@@ -21,7 +21,8 @@
         main input:not([type=checkbox]):not([type=radio]), main select, main textarea { border-color: rgba(107, 63, 38, .22); background-color: #fff; }
         main input:focus, main select:focus, main textarea:focus { outline: none; border-color: #f5a524; box-shadow: 0 0 0 2px rgba(245, 165, 36, .45); }
         main table thead { color: rgba(107, 63, 38, .8); }
-        aside nav::-webkit-scrollbar { display: none; }
+        @media (max-width: 767px) { aside nav::-webkit-scrollbar { display: none; } }
+        @media (min-width: 768px) { aside nav { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.35) transparent; } aside nav::-webkit-scrollbar { width: 6px; } aside nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.35); border-radius: 3px; } }
     </style>
 @include('partials.pwa')
 </head>
@@ -58,7 +59,7 @@
             @include('partials.brand-mark')
             <span class="leading-tight"><span class="block font-display text-lg font-extrabold">{{ config('pos.cafe_name') }}</span><span class="block text-[11px] uppercase tracking-wider text-crema/50">Back office</span></span>
         </a>
-        <nav class="flex md:flex-col md:flex-1 md:min-h-0 gap-1 px-2 pb-3 overflow-x-auto md:overflow-y-auto md:overflow-x-visible">
+        <nav class="flex flex-wrap md:flex-nowrap md:flex-col md:flex-1 md:min-h-0 gap-1 px-2 pb-3 overflow-x-auto md:overflow-y-auto md:overflow-x-visible">
             @foreach ($nav as [$label, $route, $icon, $active, $roles])
                 @continue(! in_array($me->role, $roles, true))
                 @if ($route && Route::has($route))

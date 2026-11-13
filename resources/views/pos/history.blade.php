@@ -55,6 +55,7 @@
                     <td class="px-4 py-3 whitespace-nowrap">
                         <a href="{{ route('pos.tickets.show', $t) }}" class="font-bold text-espresso hover:underline">{{ $no($t) }}</a>
                         @if (($t->channel ?? 'house') === 'glovo')<span class="ml-1 text-[10px] font-bold rounded-full bg-orange-500 text-white px-1.5 py-0.5">GLOVO</span>@endif
+                            <div class="text-xs text-gray-500 whitespace-normal max-w-xs mt-0.5">{{ $t->items->whereNull('void_at')->map(fn ($i) => $i->qty . ' x ' . ($i->item->name ?? 'Item'))->implode(', ') }}@if ($t->items->whereNotNull('void_at')->count())<span class="text-red-600"> (removed: {{ $t->items->whereNotNull('void_at')->map(fn ($i) => $i->qty . ' x ' . ($i->item->name ?? 'Item'))->implode(', ') }})</span>@endif</div>
                     </td>
                     <td class="px-4 py-3 whitespace-nowrap text-gray-600">{{ $t->opened_at?->format('D j M H:i') }}</td>
                     <td class="px-4 py-3">{{ $t->opener->name ?? '?' }}</td>
