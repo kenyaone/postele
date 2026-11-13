@@ -5,7 +5,7 @@
     $ksh = fn ($v) => number_format((float) $v, 2);
     $costs = $expenses + $purchases + $payroll; $net = $sales - $costs;
     $q = ['from' => $from->toDateString(), 'to' => $to->toDateString()];
-    $methodLabels = ['cash' => 'Cash', 'kk_stk' => 'M-Pesa STK', 'kk_till_auto' => 'M-Pesa Till', 'kk_till_manual' => 'M-Pesa Till (manual)'];
+    $methodLabels = ['cash' => 'Cash', 'kk_stk' => 'M-Pesa STK', 'kk_till_auto' => 'M-Pesa Till', 'credit' => 'On credit (not paid yet)', 'kk_till_manual' => 'M-Pesa Till (manual)'];
     $presets = ['today' => 'Today', 'yesterday' => 'Yesterday', 'this_week' => 'This week', 'this_month' => 'This month', 'last_month' => 'Last month'];
 @endphp
 
@@ -29,7 +29,7 @@
 
     {{-- SUMMARY --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white rounded-xl shadow p-4"><div class="text-xs uppercase text-gray-500">Sales</div><div class="text-2xl font-bold text-emerald-700">KSh {{ $ksh($sales) }}</div></div>
+        <div class="bg-white rounded-xl shadow p-4"><div class="text-xs uppercase text-gray-500">Money received</div><div class="text-2xl font-bold text-emerald-700">KSh {{ $ksh($sales) }}</div>@if ($onCredit > 0)<div class="text-xs text-orange-700 font-semibold">+ KSh {{ $ksh($onCredit) }} on credit, not paid yet</div>@endif</div>
         <div class="bg-white rounded-xl shadow p-4"><div class="text-xs uppercase text-gray-500">Tickets</div><div class="text-2xl font-bold">{{ $tickets }}</div><div class="text-xs text-gray-500">Avg KSh {{ $ksh($tickets ? $sales / $tickets : 0) }} @if ($voids) &middot; <span class="text-red-600">{{ $voids }} void</span> @endif</div></div>
         <div class="bg-white rounded-xl shadow p-4"><div class="text-xs uppercase text-gray-500">Costs</div><div class="text-2xl font-bold text-red-700">KSh {{ $ksh($costs) }}</div><div class="text-xs text-gray-500">Expenses {{ $ksh($expenses) }} &middot; Purchases {{ $ksh($purchases) }} &middot; Payroll {{ $ksh($payroll) }}</div></div>
         <div class="bg-white rounded-xl shadow p-4"><div class="text-xs uppercase text-gray-500">Net profit (sales &minus; costs)</div><div class="text-2xl font-bold {{ $net < 0 ? 'text-red-700' : '' }}">KSh {{ $ksh($net) }}</div><div class="text-xs text-gray-500">{{ $sales > 0 ? round($net / $sales * 100) . '% of sales' : '' }}</div></div>

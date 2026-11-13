@@ -52,10 +52,37 @@
     @endif
 </div>
 
+@if ($credit->isNotEmpty())
+<div class="bg-white rounded shadow mb-6 ring-1 ring-orange-200">
+    <div class="px-4 py-3 border-b flex flex-wrap justify-between gap-2 bg-orange-50">
+        <h2 class="font-semibold text-orange-900">On credit &middot; not paid yet <span class="font-normal">({{ $credit->count() }})</span></h2>
+        <span class="font-semibold text-orange-900">KSh {{ number_format($credit->sum(fn ($t) => $t->total), 2) }} owed &middot; <a href="{{ route('pos.debts') }}" class="underline">Debts</a></span>
+    </div>
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600 text-left">
+            <tr><th class="px-3 py-2">Bill</th><th class="px-3 py-2">Served by</th><th class="px-3 py-2">Customer</th><th class="px-3 py-2">Put on credit</th><th class="px-3 py-2 text-right">KSh</th></tr>
+        </thead>
+        <tbody>
+        @foreach ($credit as $t)
+            <tr class="border-t">
+                <td class="px-3 py-2 font-semibold">{{ $no($t) }}</td>
+                <td class="px-3 py-2">{{ $t->opener->name ?? '?' }}</td>
+                <td class="px-3 py-2">{{ $t->creditSale?->customer?->name ?? '?' }}</td>
+                <td class="px-3 py-2 whitespace-nowrap">{{ $t->closed_at?->format('H:i') }}</td>
+                <td class="px-3 py-2 text-right font-semibold">{{ number_format($t->total, 2) }}</td>
+            </tr>
+        @endforeach
+        </tbody>
+    </table>
+    </div>
+</div>
+@endif
+
 <div class="bg-white rounded shadow">
     <div class="px-4 py-3 border-b flex flex-wrap justify-between gap-2">
         <h2 class="font-semibold">
-            @if ($code !== '') Payments with M-Pesa code &ldquo;{{ $code }}&rdquo; @else Cleared bills &middot; {{ $date->isToday() ? 'Today' : $date->format('D j M Y') }} @endif
+            @if ($code !== '') Payments with M-Pesa code &ldquo;{{ $code }}&rdquo; @else Paid bills (cash or M-Pesa) &middot; {{ $date->isToday() ? 'Today' : $date->format('D j M Y') }} @endif
             <span class="text-gray-500 font-normal">({{ $paid->count() }})</span>
         </h2>
         <span class="font-semibold">KSh {{ number_format($paid->sum(fn ($t) => $t->payments->sum('amount')), 2) }}</span>

@@ -17,14 +17,17 @@ class DashboardController extends Controller
         $today      = now()->startOfDay();
         $monthStart = now()->startOfMonth();
 
-        $salesToday   = (float) Payment::where('received_at', '>=', $today)->sum('amount');
-        $byMethod     = Payment::where('received_at', '>=', $today)
+        // Money actually received (cash + M-Pesa). Bills put on credit are not money yet.
+        $salesToday   = (float) Payment::where('received_at', '>=', $today)->where('method', '!=', 'credit')->sum('amount');
+        $byMethod     = Payment::where('received_at', '>=', $today)->where('method', '!=', 'credit')
             ->selectRaw('method, SUM(amount) as total')->groupBy('method')->pluck('total', 'method');
-        $ticketsToday = Ticket::where('status', 'paid')->where('closed_at', '>=', $today)->count();
+        $creditToday  = (float) Payment::where('received_at', '>=', $today)->where('method', 'credit')->sum('amount');
+        $creditBills  = Ticket::onCredit()->where('closed_at', '>=', $today)->count();
+        $ticketsToday = Ticket::cleared()->where('closed_at', '>=', $today)->count();
         $voidsToday   = Ticket::where('status', 'void')->where('closed_at', '>=', $today)->count();
         $expToday     = (float) Expense::whereDate('spent_on', $today->toDateString())->sum('amount');
 
-        $salesMonth = (float) Payment::where('received_at', '>=', $monthStart)->sum('amount');
+        $salesMonth = (float) Payment::where('received_at', '>=', $monthStart)->where('method', '!=', 'credit')->sum('amount');
         $expMonth   = (float) Expense::where('spent_on', '>=', $monthStart->toDateString())->sum('amount');
         $purToday = (float) \App\Models\Purchase::whereDate('purchased_on', $today->toDateString())->sum('total');
         $payToday = (float) \App\Models\StaffPayment::whereDate('paid_on', $today->toDateString())->sum('amount');
@@ -33,7 +36,7 @@ class DashboardController extends Controller
 
         // Last 7 days, oldest first
         $since = now()->subDays(6)->startOfDay();
-        $salesByDay = Payment::where('received_at', '>=', $since)
+        $salesByDay = Payment::where('received_at', '>=', $since)->where('method', '!=', 'credit')
             ->selectRaw('DATE(received_at) as d, SUM(amount) as s')->groupBy('d')->pluck('s', 'd');
         $expByDay = Expense::where('spent_on', '>=', $since->toDateString())
             ->selectRaw('spent_on as d, SUM(amount) as s')->groupBy('spent_on')->pluck('s', 'd');
@@ -63,6 +66,8 @@ class DashboardController extends Controller
             'salesToday'   => $salesToday,
             'byMethod'     => $byMethod,
             'ticketsToday' => $ticketsToday,
+            'creditToday'  => $creditToday,
+            'creditBills'  => $creditBills,
             'voidsToday'   => $voidsToday,
             'avgTicket'    => $ticketsToday ? $salesToday / $ticketsToday : 0,
             'expToday'     => $expToday,

@@ -37,6 +37,23 @@ class Ticket extends Model
 
     public function creditSale(): \Illuminate\Database\Eloquent\Relations\HasOne { return $this->hasOne(CreditSale::class); }
 
+    /** Really paid: closed with cash or M-Pesa. A bill put on a customer's account is NOT paid. */
+    public function scopeCleared($q)
+    {
+        return $q->where('tickets.status', 'paid')->whereDoesntHave('payments', fn ($p) => $p->where('method', 'credit'));
+    }
+
+    /** Closed on a customer's account: money still owed (see Debts). */
+    public function scopeOnCredit($q)
+    {
+        return $q->where('tickets.status', 'paid')->whereHas('payments', fn ($p) => $p->where('method', 'credit'));
+    }
+
+    public function isOnCredit(): bool
+    {
+        return $this->status === 'paid' && $this->payments->contains('method', 'credit');
+    }
+
     public function getTotalAttribute(): float
     {
         return (float) $this->items->sum(fn ($i) => (float) $i->unit_price * (int) $i->qty);

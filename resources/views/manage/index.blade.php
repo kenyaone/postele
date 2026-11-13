@@ -15,15 +15,16 @@
     {{-- TODAY --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <div class="bg-white rounded-xl shadow p-4">
-            <div class="text-xs uppercase text-gray-500">Sales today</div>
+            <div class="text-xs uppercase text-gray-500">Money received today</div>
             <div class="text-2xl font-bold text-emerald-700">{{ $ksh($salesToday) }}</div>
             <div class="text-xs text-gray-500 mt-1">
                 @forelse ($byMethod as $m => $amt) {{ $methodLabels[$m] ?? $m }} {{ $ksh($amt) }}@if (! $loop->last) &middot; @endif
                 @empty No payments yet @endforelse
             </div>
+            @if ($creditToday > 0)<div class="text-xs text-orange-700 font-semibold mt-1">+ {{ $ksh($creditToday) }} on credit ({{ $creditBills }} bill{{ $creditBills === 1 ? '' : 's' }}), not paid yet</div>@endif
         </div>
         <div class="bg-white rounded-xl shadow p-4">
-            <div class="text-xs uppercase text-gray-500">Tickets paid</div>
+            <div class="text-xs uppercase text-gray-500">Bills paid</div>
             <div class="text-2xl font-bold">{{ $ticketsToday }}</div>
             <div class="text-xs text-gray-500 mt-1">Avg {{ $ksh($avgTicket) }} @if ($voidsToday) &middot; <span class="text-red-600">{{ $voidsToday }} void</span> @endif</div>
         </div>

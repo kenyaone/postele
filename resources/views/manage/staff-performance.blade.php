@@ -66,7 +66,7 @@
     </div>
 
     <p class="text-xs text-gray-500 mt-3 leading-relaxed">
-        Each bill counts for the waiter who opened it. <b>Average bill</b> in green is the highest, which usually means good suggesting of drinks and sides.
+        Each bill counts for the waiter who opened it. Bills put on credit are <b>not</b> counted as paid; they are in the Credit column until the customer pays. <b>Average bill</b> in green is the highest, which usually means good suggesting of drinks and sides.
         <b>Voids</b> turn red at 10% or more of a waiter's bills; see the <a class="underline" href="{{ route('manage.voids') }}">Voids list</a> for reasons.
         <b>Time to pay</b> is from opening the bill to it being paid. <b>Cash short / over</b> compares the cash counted at shift close with what the system expected; red means money short.
     </p>

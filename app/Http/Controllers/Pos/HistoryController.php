@@ -47,7 +47,9 @@ class HistoryController extends Controller
         if ($waiter) { $base->where('opened_by', $waiter); }
 
         $byStatus = (clone $base)->selectRaw('status, count(*) as c')->groupBy('status')->pluck('c', 'status');
-        $sales = (float) Payment::whereIn('ticket_id', (clone $base)->where('status', 'paid')->select('id'))->sum('amount');
+        $creditN  = (clone $base)->onCredit()->count();
+        if ($creditN) { $byStatus['paid'] = max(0, ($byStatus['paid'] ?? 0) - $creditN); $byStatus['credit'] = $creditN; }
+        $sales = (float) Payment::whereIn('ticket_id', (clone $base)->where('status', 'paid')->select('id'))->where('method', '!=', 'credit')->sum('amount');
         $tickets = (clone $base)->with(['opener', 'payments', 'items.item'])->orderByDesc('id')->paginate(50)->withQueryString();
 
         return view('pos.history', [

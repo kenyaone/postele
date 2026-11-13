@@ -34,7 +34,7 @@
 <div class="flex flex-wrap gap-2 mb-4 text-sm">
     <span class="rounded-full bg-espresso text-crema px-4 py-1.5 font-semibold">{{ $tickets->total() }} order{{ $tickets->total() === 1 ? '' : 's' }}</span>
     <span class="rounded-full bg-emerald-600 text-white px-4 py-1.5 font-semibold">Paid KSh {{ number_format($sales) }}</span>
-    @foreach (['paid', 'sent', 'open', 'void'] as $s)
+    @foreach (['paid', 'credit', 'sent', 'open', 'void'] as $s)
         @if (($byStatus[$s] ?? 0) > 0)<span class="rounded-full px-3 py-1.5 {{ $pill[$s][1] }}">{{ $pill[$s][0] }}: {{ $byStatus[$s] }}</span>@endif
     @endforeach
     @if ($q === '')<span class="text-gray-500 py-1.5">{{ $from->format('D j M') }} &ndash; {{ $to->format('D j M Y') }}</span>@endif

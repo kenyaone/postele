@@ -25,7 +25,7 @@ class BillsController extends Controller
 
         $open = Ticket::with(['items', 'opener'])->whereIn('status', ['open', 'sent'])->orderBy('opened_at')->get();
 
-        $paid = Ticket::with(['items', 'opener', 'payments'])->where('status', 'paid');
+        $paid = Ticket::with(['items', 'opener', 'payments'])->cleared();
         if ($code !== '') {
             $paid->whereHas('payments', fn ($q) => $q->where('kk_reference', 'like', '%' . $code . '%'));
         } else {
@@ -33,9 +33,15 @@ class BillsController extends Controller
         }
         $paid = $paid->orderByDesc('id')->limit(300)->get();
 
+        // Put on a customer's account that day: not paid, the money is still owed.
+        $credit = $code !== '' ? collect() : Ticket::with(['items', 'opener', 'creditSale.customer'])->onCredit()
+            ->whereHas('payments', fn ($q) => $q->where('method', 'credit')->whereBetween('received_at', [$date->copy()->startOfDay(), $date->copy()->endOfDay()]))
+            ->orderByDesc('id')->limit(300)->get();
+
         return view('pos.bills', [
             'open'       => $open,
             'paid'       => $paid,
+            'credit'     => $credit,
             'date'       => $date,
             'code'       => $code,
             'canOpenAll' => $request->user()->role === 'manager',

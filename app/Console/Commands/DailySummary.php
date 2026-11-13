@@ -25,7 +25,7 @@ class DailySummary extends Command
         $email = $this->option('to') ?: (Setting::where('key', 'report_email')->value('value') ?: null);
         if (! $email) { $this->error('No report_email setting.'); return self::FAILURE; }
 
-        $pays = Payment::with('ticket')->whereBetween('created_at', [$from, $to])->get();
+        $pays = Payment::with('ticket')->whereBetween('created_at', [$from, $to])->where('method', '!=', 'credit')->get();   // credit is in the debts section
         $group = fn ($m) => str_starts_with($m, 'kk_') ? 'mpesa' : $m;
         $byMethod = $pays->groupBy(fn ($p) => $group($p->method))->map->sum('amount');
         $hasCh = Schema::hasColumn('tickets', 'channel');

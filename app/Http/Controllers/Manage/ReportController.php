@@ -21,9 +21,10 @@ class ReportController extends Controller
         // Sales = money received (payments) in the range
         $byMethod = Payment::whereBetween('received_at', [$fromDt, $toDt])
             ->selectRaw('method, SUM(amount) as total, COUNT(*) as n')->groupBy('method')->get()->keyBy('method');
-        $sales = (float) $byMethod->sum('total');
+        $onCredit = (float) ($byMethod['credit']->total ?? 0);   // put on customers' accounts: not money yet
+        $sales = (float) $byMethod->sum('total') - $onCredit;
 
-        $tickets = Ticket::where('status', 'paid')->whereBetween('closed_at', [$fromDt, $toDt])->count();
+        $tickets = Ticket::cleared()->whereBetween('closed_at', [$fromDt, $toDt])->count();
         $voids   = Ticket::where('status', 'void')->whereBetween('closed_at', [$fromDt, $toDt])->count();
 
         $expByCat = Expense::whereBetween('spent_on', [$from->toDateString(), $to->toDateString()])
@@ -33,9 +34,9 @@ class ReportController extends Controller
         $payroll   = (float) \App\Models\StaffPayment::whereBetween('paid_on', [$from->toDateString(), $to->toDateString()])->sum('amount');
 
         // Daily table
-        $salesDay = Payment::whereBetween('received_at', [$fromDt, $toDt])
+        $salesDay = Payment::whereBetween('received_at', [$fromDt, $toDt])->where('method', '!=', 'credit')
             ->selectRaw('DATE(received_at) as d, SUM(amount) as s')->groupBy('d')->pluck('s', 'd');
-        $tixDay = Ticket::where('status', 'paid')->whereBetween('closed_at', [$fromDt, $toDt])
+        $tixDay = Ticket::cleared()->whereBetween('closed_at', [$fromDt, $toDt])
             ->selectRaw('DATE(closed_at) as d, COUNT(*) as n')->groupBy('d')->pluck('n', 'd');
         $expDay = Expense::whereBetween('spent_on', [$from->toDateString(), $to->toDateString()])
             ->selectRaw('spent_on as d, SUM(amount) as s')->groupBy('spent_on')->pluck('s', 'd');
@@ -62,7 +63,7 @@ class ReportController extends Controller
 
         $byCashier = Ticket::join('users', 'tickets.opened_by', '=', 'users.id')
             ->join('payments', 'payments.ticket_id', '=', 'tickets.id')
-            ->where('tickets.status', 'paid')->whereBetween('tickets.closed_at', [$fromDt, $toDt])
+            ->where('tickets.status', 'paid')->where('payments.method', '!=', 'credit')->whereBetween('tickets.closed_at', [$fromDt, $toDt])
             ->selectRaw('users.name, COUNT(DISTINCT tickets.id) as tickets, SUM(payments.amount) as total')
             ->groupBy('users.id', 'users.name')->orderByDesc('total')->get();
 
@@ -79,7 +80,7 @@ class ReportController extends Controller
 
         return view('manage.reports', compact(
             'from', 'to', 'preset', 'sales', 'byMethod', 'tickets', 'voids', 'expenses', 'expByCat', 'purchases', 'payroll',
-            'daily', 'byItem', 'byCategory', 'byCashier'
+            'daily', 'byItem', 'byCategory', 'byCashier', 'onCredit'
         ));
     }
 
@@ -102,17 +103,18 @@ class ReportController extends Controller
         $rows = [];
         foreach ($userIds as $uid) {
             $mine = $tickets->where('opened_by', $uid);
-            $paid = $mine->where('status', 'paid');
+            $paid = $mine->where('status', 'paid')->reject(fn ($t) => isset($credits[$t->id]));
             $r = ['name' => $names[$uid] ?? ('#' . $uid), 'bills' => $mine->count(), 'paid' => $paid->count(),
                   'cash' => 0.0, 'mpesa' => 0.0, 'other' => 0.0, 'credit' => 0.0, 'mins' => [],
                   'voids' => $mine->where('status', 'void')->count(), 'open' => $mine->where('status', 'open')->count(), 'variance' => null];
             foreach ($mine as $t) {
                 foreach ($pays[$t->id] ?? [] as $p) {
+                    if ($p->method === 'credit') continue;   // counted below from credit_sales
                     $k = $p->method === 'cash' ? 'cash' : (str_starts_with((string) $p->method, 'kk') ? 'mpesa' : 'other');
                     $r[$k] += (float) $p->amount;
                 }
                 $r['credit'] += (float) ($credits[$t->id] ?? 0);
-                if ($t->status === 'paid' && $t->closed_at) {
+                if ($t->status === 'paid' && $t->closed_at && ! isset($credits[$t->id])) {
                     $start = Carbon::parse($t->opened_at ?? $t->created_at);
                     $r['mins'][] = abs($start->diffInSeconds(Carbon::parse($t->closed_at))) / 60;
                 }
@@ -122,7 +124,7 @@ class ReportController extends Controller
                 $r['variance'] = ($r['variance'] ?? 0) + (float) $s->cash_declared - $exp;
             }
             $r['sales']    = $r['cash'] + $r['mpesa'] + $r['other'] + $r['credit'];
-            $r['avg']      = $r['paid'] ? $r['sales'] / max(1, $r['paid'] + ($r['credit'] > 0 ? 0 : 0)) : 0;
+            $r['avg']      = $r['paid'] ? ($r['cash'] + $r['mpesa'] + $r['other']) / $r['paid'] : 0;
             $r['voidPct']  = $r['bills'] ? round(100 * $r['voids'] / $r['bills']) : 0;
             $r['avgMins']  = $r['mins'] ? round(array_sum($r['mins']) / count($r['mins'])) : null;
             unset($r['mins']);
