@@ -39,6 +39,7 @@
         ['Debts', 'pos.debts', '&#128221;', 'pos.debts*', ['manager', 'cashier', 'waiter']],
         ['M-Pesa payments', 'manage.mpesa', '&#128241;', 'manage.mpesa*', ['manager']],
         ['Fix credit bills', 'manage.credit-fix', '&#128295;', 'manage.credit-fix*', ['manager']],
+        ['Old bills (DineHQ)', 'manage.legacy', '&#128451;', 'manage.legacy*', ['manager']],
         ['Cancelled orders', 'manage.voids', '&#10060;', 'manage.voids*', ['manager']],
         ['Printers', 'manage.printers', '&#128424;', 'manage.printers*', ['manager']],
         ['Menu',             'manage.menu',           '&#127869;', 'manage.menu',         ['manager']],

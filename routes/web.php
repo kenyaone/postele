@@ -67,6 +67,8 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
 
 Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->group(function () {
     Route::get('/mpesa', [\App\Http\Controllers\Manage\MpesaLogController::class, 'index'])->name('mpesa');
+    Route::get('/old-bills', [\App\Http\Controllers\Manage\LegacyBillsController::class, 'index'])->name('legacy');
+    Route::post('/old-bills/{bill}', [\App\Http\Controllers\Manage\LegacyBillsController::class, 'clear'])->name('legacy.clear');
     Route::get('/credit-fix', [\App\Http\Controllers\Manage\CreditFixController::class, 'index'])->name('credit-fix');
     Route::post('/credit-fix/link', [\App\Http\Controllers\Manage\CreditFixController::class, 'link'])->name('credit-fix.link');
     Route::post('/credit-fix/{ticket}/cash', [\App\Http\Controllers\Manage\CreditFixController::class, 'cash'])->name('credit-fix.cash');
