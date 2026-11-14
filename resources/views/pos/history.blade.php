@@ -2,7 +2,7 @@
 @section('title', 'Order history')
 @php
     $no = fn ($t) => '#' . $t->order_no;
-    $pill = ['paid' => ['Paid', 'bg-emerald-100 text-emerald-800'], 'open' => ['Taking order', 'bg-sky-100 text-sky-800'], 'sent' => ['With kitchen', 'bg-amber-100 text-amber-900'], 'void' => ['Cancelled', 'bg-gray-200 text-gray-700'], 'credit' => ['On credit', 'bg-orange-100 text-orange-800'], 'unverified' => ['Not confirmed', 'bg-red-100 text-red-800']];
+    $pill = ['paid' => ['Paid', 'bg-emerald-100 text-emerald-800'], 'open' => ['Taking order', 'bg-sky-100 text-sky-800'], 'sent' => ['Not paid', 'bg-red-100 text-red-800'], 'void' => ['Cancelled', 'bg-gray-200 text-gray-700'], 'credit' => ['Owes (on account)', 'bg-orange-100 text-orange-800'], 'unverified' => ['Not confirmed', 'bg-red-100 text-red-800']];
     $how = ['cash' => 'Cash', 'kk_stk' => 'M-Pesa', 'kk_till_auto' => 'M-Pesa', 'kk_till_manual' => 'M-Pesa', 'credit' => 'On account'];
 @endphp
 
@@ -11,7 +11,7 @@
     <label class="text-xs text-gray-500 col-span-2 md:col-span-1">From<input type="date" name="from" value="{{ $from->toDateString() }}" max="{{ now()->toDateString() }}" class="mt-1 w-full border rounded-lg px-2 py-2 text-sm"></label>
     <label class="text-xs text-gray-500 col-span-2 md:col-span-1">To<input type="date" name="to" value="{{ $to->toDateString() }}" max="{{ now()->toDateString() }}" class="mt-1 w-full border rounded-lg px-2 py-2 text-sm"></label>
     <label class="text-xs text-gray-500">Status<select name="status" class="mt-1 w-full border rounded-lg px-2 py-2 text-sm">
-        @foreach (['all' => 'All', 'paid' => 'Paid', 'sent' => 'With kitchen', 'open' => 'Taking order', 'void' => 'Cancelled'] as $k => $v)<option value="{{ $k }}" @selected($status === $k)>{{ $v }}</option>@endforeach
+        @foreach (['all' => 'All', 'paid' => 'Paid or owes', 'sent' => 'Not paid', 'open' => 'Taking order', 'void' => 'Cancelled'] as $k => $v)<option value="{{ $k }}" @selected($status === $k)>{{ $v }}</option>@endforeach
     </select></label>
     @if ($hasChannel)
         <label class="text-xs text-gray-500">Type<select name="type" class="mt-1 w-full border rounded-lg px-2 py-2 text-sm">
@@ -62,7 +62,7 @@
                     <td class="px-4 py-3 text-right">{{ $t->items->sum('qty') }}</td>
                     <td class="px-4 py-3 text-right font-bold tabular-nums">{{ number_format($t->total) }}</td>
                     @php $pk = $t->status; if ($pk === 'paid') { $m = $t->payments->pluck('method'); if ($m->contains('kk_till_manual')) $pk = 'unverified'; elseif ($m->isNotEmpty() && $m->every(fn ($x) => $x === 'credit')) $pk = 'credit'; } @endphp
-                    <td class="px-4 py-3"><span class="text-xs font-semibold rounded-full px-2.5 py-1 {{ $pill[$pk][1] ?? 'bg-gray-100' }}">{{ $pill[$pk][0] ?? $t->status }}</span></td>
+                    @php [$pl, $pc, $ph] = $t->payLabel(); @endphp<td class="px-4 py-3"><span class="text-xs font-bold rounded-full px-2.5 py-1 whitespace-nowrap {{ $pc }}" title="{{ $ph }}">{{ $pl }}</span></td>
                     <td class="px-4 py-3 text-xs">
                         @foreach ($t->payments as $p)
                             <div>{{ $how[$p->method] ?? $p->method }}@if ($p->kk_reference) <span class="font-mono font-semibold">{{ $p->kk_reference }}</span>@endif</div>

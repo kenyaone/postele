@@ -37,6 +37,24 @@ class Ticket extends Model
 
     public function creditSale(): \Illuminate\Database\Eloquent\Relations\HasOne { return $this->hasOne(CreditSale::class); }
 
+    /**
+     * One plain-language status used on every screen:
+     * Taking order / NOT PAID / OWES (on account) / PAID · Cash / PAID · M-Pesa / NOT CONFIRMED / Cancelled.
+     * Returns [label, tailwind classes, short explanation].
+     */
+    public function payLabel(): array
+    {
+        if ($this->status === 'open') return ['Taking order', 'bg-sky-100 text-sky-800', 'Still adding items, not sent to the kitchen'];
+        if ($this->status === 'sent') return ['NOT PAID', 'bg-red-100 text-red-800', 'Food sent to the kitchen, customer has not paid'];
+        if ($this->status === 'void') return ['Cancelled', 'bg-gray-200 text-gray-700', 'Cancelled, nothing to pay'];
+        $m = $this->payments->pluck('method');
+        if ($m->contains('credit')) return ['OWES', 'bg-orange-100 text-orange-800', 'Not paid: put on a customer account, to pay later'];
+        if ($m->contains('kk_till_manual')) return ['NOT CONFIRMED', 'bg-red-100 text-red-800', 'M-Pesa code not received by Kopo Kopo'];
+        if ($m->isNotEmpty() && $m->every(fn ($x) => $x === 'cash')) return ['PAID · Cash', 'bg-emerald-100 text-emerald-800', 'Paid in cash'];
+        if ($m->isNotEmpty() && $m->every(fn ($x) => str_starts_with((string) $x, 'kk'))) return ['PAID · M-Pesa', 'bg-emerald-100 text-emerald-800', 'Paid by M-Pesa, confirmed by Kopo Kopo'];
+        return ['PAID', 'bg-emerald-100 text-emerald-800', 'Paid'];
+    }
+
     /** Really paid: closed with cash or M-Pesa. A bill put on a customer's account is NOT paid. */
     public function scopeCleared($q)
     {

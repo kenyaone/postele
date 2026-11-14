@@ -7,7 +7,7 @@ use App\Models\Ticket;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
-/** Uncleared (unpaid) bills, and cleared bills with M-Pesa codes and Kopo Kopo verification. */
+/** Not-paid bills, bills owed on account, and paid bills with M-Pesa codes and Kopo Kopo verification. */
 class BillsController extends Controller
 {
     public function index(Request $request)

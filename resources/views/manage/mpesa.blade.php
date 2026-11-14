@@ -33,7 +33,7 @@
     </div>
     <a href="{{ route('pos.bills') }}" class="rounded-2xl bg-white p-4 shadow ring-1 ring-black/5 hover:ring-emerald-400 flex flex-col justify-center">
         <div class="text-sm font-semibold text-emerald-700">&#129534; Bills &rarr;</div>
-        <div class="text-xs text-gray-500">Uncleared and cleared bills</div>
+        <div class="text-xs text-gray-500">Paid and not-paid bills</div>
     </a>
 </div>
 

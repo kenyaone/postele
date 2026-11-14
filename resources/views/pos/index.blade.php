@@ -92,7 +92,7 @@
             <div class="p-8 text-center text-roast/70"><div class="text-5xl mb-2">&#129534;</div><p class="font-bold text-espresso">No order open</p><p class="text-sm">Tap <b>+ New order</b> to begin.</p></div>
         @else
             @php
-                $st = ['open' => ['Taking order', 'bg-sky-100 text-sky-800'], 'sent' => ['With the kitchen', 'bg-amber-100 text-amber-900'], 'paid' => ['Paid', 'bg-emerald-100 text-emerald-800'], 'void' => ['Cancelled', 'bg-gray-200 text-gray-700']][$ticket->status] ?? [$ticket->status, 'bg-gray-100 text-gray-700'];
+                $st = $ticket->payLabel();
                 $count = (int) $ticket->items->sum('qty');
                 $empty = $ticket->items->isEmpty();
             @endphp
@@ -205,7 +205,7 @@
                     @php $pay = $ticket->payments()->latest('id')->first(); $onCredit = $pay && $pay->method === 'credit'; $unverified = $pay && $pay->method === 'kk_till_manual'; @endphp
                     <div class="pop rounded-2xl {{ $onCredit ? 'bg-amber-500' : ($unverified ? 'bg-red-600' : 'bg-emerald-600') }} text-white p-5 text-center mb-3 shadow-lg">
                         <div class="text-4xl leading-none">{!! $onCredit ? '&#128221;' : ($unverified ? '&#9888;' : '&#10003;') !!}</div>
-                        <div class="font-display text-2xl font-extrabold mt-1">{{ $onCredit ? 'ON CREDIT' : ($unverified ? 'NOT CONFIRMED' : 'PAID') }}</div>
+                        <div class="font-display text-2xl font-extrabold mt-1">{{ $onCredit ? 'NOT PAID · OWES' : ($unverified ? 'NOT CONFIRMED' : 'PAID') }}</div>
                         <div class="text-sm opacity-90">{{ $onCredit ? 'Not paid yet: it is in Debts until the customer pays' : ($unverified ? 'Kopo Kopo has not received this M-Pesa code' : 'Payment recorded') }}</div>
                         @if ($pay && $pay->kk_reference)
                             @php [$vLabel, $vTone] = $pay->verification(); @endphp
