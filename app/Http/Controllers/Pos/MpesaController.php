@@ -57,6 +57,35 @@ class MpesaController extends Controller
                 . '. Ask the customer to enter their PIN.');
     }
 
+    /**
+     * The customer is paying from the Kopo Kopo app (or straight to the till): those payments carry no order number,
+     * so the waiter tells the POS which bill to expect. The next till payment of exactly this amount (within 20 minutes)
+     * clears it. If it already arrived in the last 20 minutes, it is linked straight away.
+     */
+    public function awaitTill(Request $request, Ticket $ticket, PaymentSettler $settler)
+    {
+        $this->authorizeTicket($request, $ticket);
+        $ticket->load('items');
+        if (! in_array($ticket->status, ['open', 'sent'], true) || $ticket->total <= 0) {
+            return back()->withErrors(['mpesa' => 'This bill has nothing left to pay.']);
+        }
+        StkRequest::where('ticket_id', $ticket->id)->where('phone', 'kk-app')->where('status', 'pending')->update(['status' => 'failed', 'error' => 'Replaced']);
+
+        $event = KkEvent::where('event_type', 'buygoods_transaction_received')->where('status', 'pending')
+            ->where('created_at', '>=', now()->subMinutes(20))->orderBy('id')->get()
+            ->first(fn ($e) => abs((float) $e->amount - (float) $ticket->total) < 0.01 && ! Payment::where('kk_reference', $e->reference)->exists());
+        if ($event) {
+            try {
+                $settler->settle($ticket, 'kk_till_auto', (float) $event->amount, $event->reference, $request->user()->id);
+                $event->update(['status' => 'matched']);
+                return redirect()->route('pos.tickets.show', $ticket)->with('ok', "M-Pesa {$event->reference} (KSh " . number_format((float) $event->amount) . ') found. Bill paid.');
+            } catch (RuntimeException $e) { /* fall through and wait */ }
+        }
+
+        StkRequest::create(['ticket_id' => $ticket->id, 'phone' => 'kk-app', 'amount' => (int) ceil($ticket->total), 'status' => 'pending', 'requested_by' => $request->user()->id]);
+        return redirect()->route('pos.tickets.show', $ticket)->with('ok', 'Waiting for KSh ' . number_format($ticket->total) . ' from the Kopo Kopo app. The bill clears itself when the money arrives.');
+    }
+
     public function stkStatus(Request $request, Ticket $ticket)
     {
         $this->authorizeTicket($request, $ticket);

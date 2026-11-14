@@ -56,6 +56,7 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
     Route::post('/tickets/{ticket}/void',                [PosController::class, 'voidTicket'])->middleware('throttle:10,1')->name('tickets.void');
     Route::post('/tickets/{ticket}/mpesa/stk',    [MpesaController::class, 'stk'])->middleware('throttle:6,1')->name('tickets.mpesa.stk');
     Route::get('/tickets/{ticket}/mpesa/status',  [MpesaController::class, 'stkStatus'])->name('tickets.mpesa.status');
+    Route::post('/tickets/{ticket}/mpesa/await',  [MpesaController::class, 'awaitTill'])->name('tickets.mpesa.await');
     Route::post('/tickets/{ticket}/mpesa/match',  [MpesaController::class, 'match'])->name('tickets.mpesa.match');
     Route::post('/tickets/{ticket}/mpesa/manual', [MpesaController::class, 'manual'])->name('tickets.mpesa.manual');
 

@@ -27,6 +27,15 @@ class TillAutoMatcher
         $paidAt = $event->received_at ?? $event->created_at ?? now();
         $amount = (float) $event->amount;
 
+        // 1. A waiter tapped "Customer is paying from the Kopo Kopo app / till" on a bill of exactly this amount
+        //    in the last 20 minutes: the oldest such bill gets this payment.
+        if ($t = $this->waitingBill($amount, $paidAt)) {
+            $this->settler->settle($t->ticket, 'kk_till_auto', $amount, $event->reference, null);
+            $t->update(['status' => 'success']);
+            $event->update(['status' => 'matched']);
+            return $t->ticket;
+        }
+
         $candidates = Ticket::with('items')
             ->where('status', 'sent')
             ->where('created_at', '<=', $paidAt)
@@ -34,7 +43,7 @@ class TillAutoMatcher
             ->whereHas('items', fn ($q) => $q->where('sent_at', '>=', now()->subHour()))
             ->get()
             ->filter(fn ($t) => abs((float) $t->total - $amount) < 0.01)
-            ->reject(fn ($t) => StkRequest::where('ticket_id', $t->id)->where('created_at', '>=', now()->subMinutes(3))->whereIn('status', ['pending', 'sent'])->exists())
+            ->reject(fn ($t) => StkRequest::where('ticket_id', $t->id)->where('created_at', '>=', now()->subMinutes(3))->whereIn('status', ['pending', 'sent'])->where('phone', '!=', 'kk-app')->exists())
             ->values();
 
         if ($candidates->count() === 1) {
@@ -45,5 +54,13 @@ class TillAutoMatcher
         }
         // Several bills together are never merged automatically: the waiter picks them by order number on the POS.
         return null;
+    }
+
+    /** Oldest "waiting for app/till payment" claim for this amount, made in the 20 minutes up to the payment. */
+    public function waitingBill(float $amount, $paidAt): ?StkRequest
+    {
+        return StkRequest::with('ticket.items')->where('phone', 'kk-app')->where('status', 'pending')
+            ->where('created_at', '>=', $paidAt->copy()->subMinutes(20))->orderBy('id')->get()
+            ->first(fn ($s) => $s->ticket && in_array($s->ticket->status, ['open', 'sent'], true) && abs((float) $s->ticket->total - $amount) < 0.01);
     }
 }

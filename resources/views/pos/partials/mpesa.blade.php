@@ -1,7 +1,8 @@
 @php
     $kkReady    = \App\Services\KopoKopo::ready();
     $stkLatest  = \App\Models\StkRequest::where('ticket_id', $ticket->id)->latest('id')->first();
-    $stkWait    = $stkLatest && $stkLatest->status === 'pending' && $stkLatest->created_at->gt(now()->subMinutes(3));
+    $stkWait    = $stkLatest && $stkLatest->status === 'pending' && $stkLatest->phone !== 'kk-app' && $stkLatest->created_at->gt(now()->subMinutes(3));
+    $appWait    = $stkLatest && $stkLatest->status === 'pending' && $stkLatest->phone === 'kk-app' && $stkLatest->created_at->gt(now()->subMinutes(20));
     $mpesaEvents = \App\Models\KkEvent::where('event_type', 'buygoods_transaction_received')->where('status', 'pending')
         ->where('received_at', '>=', now()->subHours(3))->orderByDesc('received_at')->limit(8)->get();
     $billKsh = (int) ceil($ticket->total);
@@ -28,6 +29,23 @@
                 }, 3000);
             })();
         </script>
+    @elseif ($appWait)
+        <div class="rounded-2xl bg-amber-50 ring-1 ring-amber-200 p-4 text-center">
+            <div class="text-3xl animate-pulse">&#128241;</div>
+            <div class="font-bold text-amber-900">Waiting for KSh {{ number_format($billKsh) }} from the Kopo Kopo app&hellip;</div>
+            <div class="text-xs text-amber-800 mt-0.5">The bill clears itself when the money reaches the till (up to 20 minutes). The amount must be exactly KSh {{ number_format($billKsh) }}.</div>
+        </div>
+        <script>
+            (function () {
+                var url = @json(route('pos.tickets.mpesa.status', $ticket)), n = 0;
+                var t = setInterval(function () {
+                    n++;
+                    fetch(url, { headers: { 'Accept': 'application/json' } }).then(function (r) { return r.json(); }).then(function (d) {
+                        if (d.ticket === 'paid' || d.stk !== 'pending' || n > 240) { clearInterval(t); location.reload(); }
+                    }).catch(function () {});
+                }, 5000);
+            })();
+        </script>
     @elseif ($stkLatest && $stkLatest->status === 'failed' && $stkLatest->created_at->gt(now()->subMinutes(10)))
         <div class="rounded-2xl bg-red-50 ring-1 ring-red-200 text-red-800 text-sm p-3">&#9888; The last prompt did not go through: {{ $stkLatest->error }}</div>
     @endif
@@ -48,6 +66,14 @@
             <p class="text-xs text-roast/60 mt-1">Then send the prompt, tap their till payment, or type their M-Pesa code. All ticked orders are paid with one M-Pesa.</p>
         </details>
     @endif
+
+    @unless ($appWait)
+    <form method="POST" action="{{ route('pos.tickets.mpesa.await', $ticket) }}" class="rounded-2xl bg-white ring-1 ring-roast/10 p-3">
+        @csrf
+        <button class="w-full rounded-xl ring-2 ring-green-700 text-green-800 font-semibold py-2.5 hover:bg-green-50">&#128241; Prompt sent from the Kopo Kopo app / customer paying the till</button>
+        <p class="text-xs text-roast/60 mt-1">Tap this <b>before or right after</b> the customer pays KSh {{ number_format($billKsh) }}. The bill clears itself when that payment arrives.</p>
+    </form>
+    @endunless
 
     <div class="rounded-2xl bg-white ring-1 ring-roast/10 p-3">
         <div class="text-xs font-bold uppercase tracking-wider text-roast/60 mb-2"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-green-600 text-white mr-1">1</span> Send a prompt to their phone</div>

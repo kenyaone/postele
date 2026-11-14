@@ -13,7 +13,7 @@
 
 @php
     $__mp = false;
-    try { $__mp = \App\Models\StkRequest::where('status', 'pending')->where('created_at', '<=', now()->subMinutes(5))->where('created_at', '>=', now()->subHours(3))->exists(); } catch (\Throwable $e) {}
+    try { $__mp = \App\Models\StkRequest::where('status', 'pending')->where('phone', '!=', 'kk-app')->where('created_at', '<=', now()->subMinutes(5))->where('created_at', '>=', now()->subHours(3))->exists(); } catch (\Throwable $e) {}
 @endphp
 @if ($__mp)
     <div class="bg-amber-400 text-stone-900 text-sm font-semibold px-4 py-2 text-center print:hidden">&#9888; An M-Pesa prompt has had no answer from Kopo Kopo for over 5 minutes. If the customer paid, find their payment on the M-Pesa tab by code.</div>
