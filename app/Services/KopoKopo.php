@@ -46,15 +46,21 @@ class KopoKopo
         });
     }
 
-    /** Sends the M-Pesa prompt. Returns the Kopo Kopo Location URL of the incoming payment. */
-    public function stkPush(StkRequest $stk): string
+    /**
+     * Sends the M-Pesa prompt. Returns the Kopo Kopo Location URL of the incoming payment.
+     *
+     * @param  array<int, string>  $orderNos  POS order numbers this prompt pays, shown as the order number in Kopo Kopo.
+     */
+    public function stkPush(StkRequest $stk, array $orderNos = []): string
     {
+        $orderNumber = implode(', ', $orderNos ?: [optional($stk->ticket)->order_no ?? (string) $stk->ticket_id]);
+
         $r = Http::withToken($this->token())->acceptJson()->timeout(20)->post($this->base() . '/api/v2/incoming_payments', [
             'payment_channel' => 'M-PESA STK Push',
             'till_number'     => self::stkTill(),
             'subscriber'      => ['first_name' => 'Tele Cafe', 'last_name' => 'Customer', 'phone_number' => $stk->phone],
             'amount'          => ['currency' => 'KES', 'value' => (int) $stk->amount],
-            'metadata'        => ['ticket_id' => (string) $stk->ticket_id, 'stk_request_id' => (string) $stk->id],
+            'metadata'        => ['order_number' => $orderNumber, 'ticket_id' => (string) $stk->ticket_id, 'stk_request_id' => (string) $stk->id],
             '_links'          => ['callback_url' => route('kk.stk.callback')],
         ]);
 

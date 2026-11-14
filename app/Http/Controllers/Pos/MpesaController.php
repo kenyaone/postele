@@ -40,7 +40,7 @@ class MpesaController extends Controller
         $extra = $bills->slice(1)->map(fn ($t) => StkRequest::create(['ticket_id' => $t->id, 'phone' => $phone, 'amount' => (int) ceil($t->total), 'status' => 'pending', 'requested_by' => $request->user()->id]));
 
         try {
-            $location = $kk->stkPush($stk);
+            $location = $kk->stkPush($stk, $bills->pluck('order_no')->all());
             $fields = ['location' => $location, 'kk_id' => basename((string) parse_url($location, PHP_URL_PATH))];
             $stk->update($fields);
             $extra->each->update($fields);
