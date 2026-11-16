@@ -81,7 +81,7 @@
                 </form>
             </div>
         @endif
-        @php $hasCredit = \Illuminate\Support\Facades\Schema::hasTable('credit_sales'); $isGlovo = $hasCredit && $ticket && ($ticket->channel ?? 'house') === 'glovo'; @endphp
+        @php $houseCredit = false; $hasCredit = \Illuminate\Support\Facades\Schema::hasTable('credit_sales'); $isGlovo = $hasCredit && $ticket && ($ticket->channel ?? 'house') === 'glovo'; @endphp
 @if ($hasCredit) @include('pos.partials.channel') @endif
 @include('pos.partials.menu')
     </div>
@@ -152,10 +152,10 @@
                     </div>
                     @if ($isGlovo) @include('pos.partials.glovo-pay') @else
 <div class="text-xs font-bold uppercase tracking-wider text-roast/60 mb-2">How is the customer paying?</div>
-                    <div class="grid {{ $hasCredit ? 'grid-cols-3' : 'grid-cols-2' }} gap-2 mb-3">
+                    <div class="grid {{ $houseCredit ? 'grid-cols-3' : 'grid-cols-2' }} gap-2 mb-3">
                         <button type="button" data-paytab="mpesa" class="paytab rounded-2xl py-3 font-extrabold ring-2 bg-white ring-roast/15">&#128241; M-Pesa</button>
                         <button type="button" data-paytab="cash" class="paytab rounded-2xl py-3 font-extrabold ring-2 bg-white ring-roast/15">&#128181; Cash</button>
-@if ($hasCredit)<button type="button" data-paytab="credit" class="paytab rounded-2xl py-3 font-extrabold ring-2 bg-white ring-roast/15">&#128221; Credit</button>@endif
+@if ($houseCredit)<button type="button" data-paytab="credit" class="paytab rounded-2xl py-3 font-extrabold ring-2 bg-white ring-roast/15">&#128221; Credit</button>@endif
                     </div>
                     <div data-paypane="mpesa" class="{{ $payTab === 'mpesa' ? '' : 'hidden' }}">
                         @include('pos.partials.mpesa')
@@ -173,7 +173,7 @@
                             <button class="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-lg py-4 shadow-md">&#128181; Close bill (cash)</button>
                         </form>
                     </div>
-                    @if ($hasCredit)<div data-paypane="credit" class="{{ $payTab === 'credit' ? '' : 'hidden' }}">@include('pos.partials.credit')</div>@endif
+                    @if ($houseCredit)<div data-paypane="credit" class="{{ $payTab === 'credit' ? '' : 'hidden' }}">@include('pos.partials.credit')</div>@endif
 @endif
 <div class="mt-3 text-center"><button type="button" onclick="document.getElementById('void-modal').classList.remove('hidden')" class="text-xs text-red-600 hover:underline">Cancel order&hellip;</button></div>
                     <div id="void-modal" class="{{ session('void_open') || $errors->has('manager_pin') || $errors->has('reason') ? '' : 'hidden' }} fixed inset-0 z-40 bg-black/50 flex items-end sm:items-center justify-center p-3">
