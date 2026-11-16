@@ -98,6 +98,7 @@ class PosController extends Controller
         $this->authorizeTicket($request, $ticket);
         abort_unless($ticketItem->ticket_id === $ticket->id, 404);
         abort_unless($ticket->status === 'open', 403, 'Ticket is not open.');
+        abort_if($ticketItem->sent_at, 403, 'Already sent to the kitchen. Ask a manager to cancel it.');
 
         $data = $request->validate(['qty' => 'required|integer|min:0|max:999']);
         $qty = (int) $data['qty'];
@@ -138,6 +139,17 @@ class PosController extends Controller
         return redirect()->route('pos.tickets.show', $ticket)
             ->with('ok', $mode === 'both' ? 'Sent to kitchen. Printing kitchen ticket and bill.' : 'Sent to kitchen. Printing kitchen ticket.')
             ->with('print_bill', ($bm = app(\App\Services\PrintRouter::class)->browserMode($mode)) ? route('pos.tickets.bill', [$ticket, 'mode' => $bm]) : null);
+    }
+
+    /** Back to the menu from the payment screen, to add more dishes. Only before any payment has started; dishes already sent stay locked. */
+    public function reopen(Request $request, Ticket $ticket)
+    {
+        $this->authorizeTicket($request, $ticket);
+        abort_unless($ticket->status === 'sent', 403, 'Only a bill waiting for payment can take more items.');
+        abort_if($ticket->payments()->exists(), 403, 'A payment is already recorded on this bill.');
+        abort_if(\Illuminate\Support\Facades\DB::table('stk_requests')->where('ticket_id', $ticket->id)->where('status', 'pending')->exists(), 403, 'An M-Pesa prompt is still waiting on this bill. Wait for it to finish first.');
+        $ticket->update(['status' => 'open']);
+        return redirect()->route('pos.tickets.show', $ticket);
     }
 
     /** Browser-printed slips. mode: kot | both (kitchen ticket + bill) | bill | receipt (paid tickets). */

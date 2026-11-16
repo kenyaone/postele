@@ -108,7 +108,7 @@
                     @foreach ($ticket->items as $line)
                         <li class="py-2.5 flex items-center gap-3">
                             <div class="flex-1 min-w-0"><div class="font-semibold leading-tight truncate">{{ $line->item->name }}</div><div class="text-xs text-roast/60">KSh {{ number_format((float) $line->unit_price) }} each</div></div>
-                            @if ($ticket->status === 'open')
+                            @if ($ticket->status === 'open' && ! $line->sent_at)
                                 <div class="flex items-center rounded-full bg-crema ring-1 ring-roast/15">
                                     <form method="POST" action="{{ route('pos.tickets.items.update', [$ticket, $line]) }}" data-soft>@csrf @method('PATCH')<input type="hidden" name="qty" value="{{ $line->qty - 1 }}"><button class="w-12 h-12 rounded-full text-xl font-bold hover:bg-white active:bg-amber-100" title="{{ $line->qty > 1 ? 'One less' : 'Remove' }}">{!! $line->qty > 1 ? '&minus;' : '&#128465;' !!}</button></form>
                                     <span class="w-8 text-center text-lg font-extrabold">{{ $line->qty }}</span>
@@ -150,6 +150,7 @@
                         <span><span class="animate-pulse">&#9679;</span> With the kitchen @if ($sentAt) since {{ \Illuminate\Support\Carbon::parse($sentAt)->format('H:i') }} @endif</span>
                         @include('pos.partials.print-status')
                     </div>
+                    @if ($ticket->payments->isEmpty())<form method="POST" action="{{ route('pos.tickets.reopen', $ticket) }}" class="mb-3">@csrf<button class="w-full rounded-xl py-2.5 text-sm font-bold bg-white ring-2 ring-roast/15 hover:bg-crema">&#43; Add more items</button></form>@endif
                     @if ($isGlovo) @include('pos.partials.glovo-pay') @else
 <div class="text-xs font-bold uppercase tracking-wider text-roast/60 mb-2">How is the customer paying?</div>
                     <div class="grid {{ $houseCredit ? 'grid-cols-3' : 'grid-cols-2' }} gap-2 mb-3">
