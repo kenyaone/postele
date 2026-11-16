@@ -26,7 +26,7 @@ class PosController extends Controller
         }
 
         $current = Ticket::where('opened_by', $user->id)
-            ->whereIn('status', ['open', 'sent'])
+            ->where('status', 'open') // unpaid (sent) bills stay in Bills, so the waiter can take the next order
             ->latest('opened_at')->first();
 
         if ($current) {

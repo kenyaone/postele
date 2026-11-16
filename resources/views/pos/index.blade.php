@@ -151,6 +151,7 @@
                         @include('pos.partials.print-status')
                     </div>
                     @if ($ticket->payments->isEmpty())<form method="POST" action="{{ route('pos.tickets.reopen', $ticket) }}" class="mb-3">@csrf<button class="w-full rounded-xl py-2.5 text-sm font-bold bg-white ring-2 ring-roast/15 hover:bg-crema">&#43; Add more items</button></form>@endif
+                    <a href="{{ route('pos.index') }}" class="mb-3 block w-full rounded-xl py-2.5 text-center text-sm font-bold bg-white ring-2 ring-roast/15 hover:bg-crema">&#8594; Pay later, take next order<span class="block text-xs font-normal opacity-70">This bill stays in Bills until it is paid</span></a>
                     @if ($isGlovo) @include('pos.partials.glovo-pay') @else
 <div class="text-xs font-bold uppercase tracking-wider text-roast/60 mb-2">How is the customer paying?</div>
                     <div class="grid {{ $houseCredit ? 'grid-cols-3' : 'grid-cols-2' }} gap-2 mb-3">
