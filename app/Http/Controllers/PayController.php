@@ -48,7 +48,7 @@ class PayController extends Controller
         if (StkRequest::where('ticket_id', $t->id)->where('created_at', '>=', now()->subSeconds(45))->exists()) {
             return back()->withErrors(['phone' => 'A prompt was just sent. Check your phone, or try again in a minute.']);
         }
-        $amount = (int) ceil($t->total);
+        $amount = (int) ceil($t->balance);
         $stk = StkRequest::create(['ticket_id' => $t->id, 'phone' => $phone, 'amount' => $amount, 'status' => 'pending', 'requested_by' => $t->opened_by]);
         try {
             $location = $kk->stkPush($stk);

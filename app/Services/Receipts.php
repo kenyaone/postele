@@ -58,7 +58,7 @@ class Receipts
             ->line($cafe)
             ->size(1, 1)->bold(false)
             ->lineIf(config('pos.address'))
-            ->line("Till $till" . ($phone ? "  \u{00B7}  $phone" : ""))
+            ->lineIf($phone ? "Tel $phone" : null)
             ->line(str_repeat('-', self::WIDTH));
 
         if ($isBill) {
@@ -91,23 +91,32 @@ class Receipts
           ->line('TOTAL' . str_repeat(' ', max(1, $pad)) . $totalStr)
           ->size(1, 1)->bold(false);
 
+        $label = fn ($p) => match ($p->method) {
+            'cash' => 'Cash',
+            'credit' => 'On account',
+            'kk_stk' => 'M-Pesa STK',
+            'kk_till_auto', 'kk_till_manual' => 'M-Pesa Till',
+            default => $p->method,
+        };
+        $paidRows = $ticket->payments()->orderBy('id')->get();
         if (! $isBill) {
-            $methodLabel = match ($payment->method) {
-                'cash'           => 'Cash',
-                'kk_stk'         => 'M-Pesa STK',
-                'kk_till_auto',
-                'kk_till_manual' => 'M-Pesa Till',
-                default          => $payment->method,
-            };
-            $ref = $payment->kk_reference ? ' (' . $payment->kk_reference . ')' : '';
-            $e->line('Paid: ' . $methodLabel . $ref);
+            if ($paidRows->count() > 1) {
+                foreach ($paidRows as $p) {
+                    $e->line($this->padLine(substr($label($p) . ($p->kk_reference ? ' ' . $p->kk_reference : ''), 0, 20), number_format((float) $p->amount, 2)));
+                }
+            } else {
+                $e->line('Paid: ' . $label($payment) . ($payment->kk_reference ? ' (' . $payment->kk_reference . ')' : ''));
+            }
+        } elseif ($paidRows->isNotEmpty()) {
+            $paidSum = (float) $paidRows->sum('amount');
+            $e->line($this->padLine('Paid so far', number_format($paidSum, 2)));
+            $e->bold(true)->line($this->padLine('LEFT TO PAY', 'KSh ' . number_format(max(0, $total - $paidSum), 2)))->bold(false);
         }
 
         $e->line(str_repeat('-', self::WIDTH))->align('center');
 
         if ($isBill) {
-            $e->line('Pay at the counter.')
-              ->line('M-Pesa Till ' . $till)
+            $e->line('No smartphone? Ask the waiter')->line('to send an M-Pesa prompt.')
                 ->feed(1)->line('Scan to pay with M-Pesa:')->qr(\App\Http\Controllers\PayController::link($ticket), 6)
               ->line('(Not a receipt)');
         } else {

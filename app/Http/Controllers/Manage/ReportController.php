@@ -130,15 +130,32 @@ class ReportController extends Controller
             unset($r['mins']);
             $rows[] = $r;
         }
+        // Waiter pay (App\Services\WaiterPay): money collected, daily pay and commission.
+        $pay = app(\App\Services\WaiterPay::class)->period($from, $to);
+        $blank = ['bills' => 0, 'paid' => 0, 'cash' => 0.0, 'mpesa' => 0.0, 'other' => 0.0, 'credit' => 0.0, 'voids' => 0, 'open' => 0,
+            'variance' => null, 'sales' => 0.0, 'avg' => 0, 'voidPct' => 0, 'avgMins' => null];
+        foreach ($pay['users'] as $uid => $p) {
+            $name = $names[$uid] ?? $p['name'];
+            $i = collect($rows)->search(fn ($r) => $r['name'] === $name);
+            if ($i === false) { $rows[] = ['name' => $name] + $blank; $i = count($rows) - 1; }
+            $rows[$i] += ['collected' => $p['collected'], 'dailyPay' => $p['daily'], 'commission' => $p['commission'], 'totalPay' => $p['total']];
+        }
+        foreach ($rows as $i => $r) $rows[$i] += ['collected' => 0.0, 'dailyPay' => 0.0, 'commission' => 0.0, 'totalPay' => 0.0];
         usort($rows, fn ($a, $b) => $b['sales'] <=> $a['sales']);
+
+        if ($request->query('export') === 'payout') {
+            return $this->csv("tele-cafe-waiter-pay-{$from->toDateString()}-to-{$to->toDateString()}.csv",
+                ['Waiter', 'Day', 'Collected', 'Daily pay', 'Commission', 'Total pay', 'Cafe collected that day'],
+                array_map(fn ($d) => [$d['name'], $d['date'], $d['collected'], $d['daily'], $d['commission'], $d['total'], $d['cafe']], $pay['days']));
+        }
 
         if ($request->query('export') === 'csv') {
             return $this->csv("tele-cafe-waiters-{$from->toDateString()}-to-{$to->toDateString()}.csv",
-                ['Waiter', 'Bills', 'Paid bills', 'Sales', 'Average bill', 'Cash', 'M-Pesa', 'Other', 'Credit', 'Voids', 'Void %', 'Still open', 'Avg minutes to pay', 'Cash short(-)/over(+)'],
-                array_map(fn ($r) => [$r['name'], $r['bills'], $r['paid'], $r['sales'], round($r['avg']), $r['cash'], $r['mpesa'], $r['other'], $r['credit'], $r['voids'], $r['voidPct'], $r['open'], $r['avgMins'], $r['variance']], $rows));
+                ['Waiter', 'Bills', 'Paid bills', 'Sales', 'Average bill', 'Cash', 'M-Pesa', 'Other', 'Credit', 'Voids', 'Void %', 'Still open', 'Avg minutes to pay', 'Cash short(-)/over(+)', 'Collected', 'Daily pay', 'Commission', 'Total pay'],
+                array_map(fn ($r) => [$r['name'], $r['bills'], $r['paid'], $r['sales'], round($r['avg']), $r['cash'], $r['mpesa'], $r['other'], $r['credit'], $r['voids'], $r['voidPct'], $r['open'], $r['avgMins'], $r['variance'], $r['collected'], $r['dailyPay'], $r['commission'], $r['totalPay']], $rows));
         }
 
-        return view('manage.staff-performance', compact('rows', 'from', 'to', 'preset'));
+        return view('manage.staff-performance', compact('rows', 'from', 'to', 'preset', 'pay'));
     }
 
     private function range(Request $request): array

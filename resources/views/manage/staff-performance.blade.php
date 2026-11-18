@@ -23,6 +23,7 @@
             <div><label class="block text-xs text-gray-500">To</label><input type="date" name="to" value="{{ $to->toDateString() }}" max="{{ now()->toDateString() }}" class="border rounded px-2 py-1 text-sm"></div>
             <button class="bg-gray-800 text-white text-sm rounded px-3 py-1.5">Show</button>
             <a href="{{ route('manage.reports.staff', $q + ['export' => 'csv']) }}" class="text-sm rounded px-3 py-1.5 border hover:bg-gray-50">Download</a>
+        <a href="{{ route('manage.reports.staff', $q + ['export' => 'payout']) }}" class="text-sm rounded px-3 py-1.5 border border-emerald-600 text-emerald-800 hover:bg-emerald-50">Download pay sheet</a>
         </form>
     </div>
 
@@ -41,6 +42,7 @@
                     <th class="px-3 py-2 text-right">Average bill</th><th class="px-3 py-2 text-right">Cash</th><th class="px-3 py-2 text-right">M-Pesa</th>
                     <th class="px-3 py-2 text-right">Credit</th><th class="px-3 py-2 text-right">Voids</th><th class="px-3 py-2 text-right">Still open</th>
                     <th class="px-3 py-2 text-right">Time to pay</th><th class="px-3 py-2 text-right">Cash short / over</th>
+                <th class="px-3 py-2 text-right bg-emerald-50">Collected</th><th class="px-3 py-2 text-right bg-emerald-50">Daily pay</th><th class="px-3 py-2 text-right bg-emerald-50">Commission</th><th class="px-3 py-2 text-right bg-emerald-50">Total pay</th>
                 </tr>
             </thead>
             <tbody>
@@ -57,9 +59,13 @@
                         <td class="px-3 py-2 text-right {{ $r['open'] ? 'text-amber-700' : '' }}">{{ $r['open'] }}</td>
                         <td class="px-3 py-2 text-right">{{ $r['avgMins'] === null ? '-' : $r['avgMins'] . ' min' }}</td>
                         <td class="px-3 py-2 text-right {{ ($r['variance'] ?? 0) < 0 ? 'text-red-700 font-semibold' : '' }}">{{ $r['variance'] === null ? '-' : (($r['variance'] > 0 ? '+' : '') . $ksh($r['variance'])) }}</td>
+                <td class="px-3 py-2 text-right bg-emerald-50/50">{{ $r['collected'] ? $ksh($r['collected']) : '-' }}</td>
+                <td class="px-3 py-2 text-right bg-emerald-50/50">{{ $r['dailyPay'] ? $ksh($r['dailyPay']) : '-' }}</td>
+                <td class="px-3 py-2 text-right bg-emerald-50/50">{{ $r['commission'] ? $ksh($r['commission']) : '-' }}</td>
+                <td class="px-3 py-2 text-right bg-emerald-50/50 font-semibold">{{ $r['totalPay'] ? $ksh($r['totalPay']) : '-' }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="11" class="px-3 py-6 text-center text-gray-500">No bills in these dates yet.</td></tr>
+                    <tr><td colspan="15" class="px-3 py-6 text-center text-gray-500">No bills in these dates yet.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -70,4 +76,10 @@
         <b>Voids</b> turn red at 10% or more of a waiter's bills; see the <a class="underline" href="{{ route('manage.voids') }}">Voids list</a> for reasons.
         <b>Time to pay</b> is from opening the bill to it being paid. <b>Cash short / over</b> compares the cash counted at shift close with what the system expected; red means money short.
     </p>
+@php $wp = fn ($k) => number_format((float) \App\Services\WaiterPay::setting($k)); @endphp
+<p class="text-xs text-gray-500 mt-2 leading-relaxed">
+    <b>Waiter pay</b> (from {{ \Illuminate\Support\Carbon::parse(\App\Services\WaiterPay::setting('pay_start'))->format('j M Y') }}): <b>Collected</b> is cash and M-Pesa paid on the waiter's bills while their shift was open, plus old credit on the day it is repaid; unpaid, cancelled and credit bills count for nothing.
+    Each day, collecting KSh {{ $wp('pay_threshold') }} (Saturday KSh {{ $wp('pay_threshold_sat') }}) earns KSh {{ $wp('pay_daily') }} daily pay, and {{ $wp('pay_comm_pct') }}% commission is paid on the part above KSh {{ $wp('pay_comm_from') }} (Saturday KSh {{ $wp('pay_comm_from_sat') }}) when the whole caf&eacute; collected at least KSh {{ $wp('pay_gate') }} (Saturday KSh {{ $wp('pay_gate_sat') }}).
+    Change these in <a class="underline" href="{{ route('manage.settings') }}">Settings</a>. <b>Download pay sheet</b> gives one line per waiter per day for the dates shown.
+</p>
 @endsection

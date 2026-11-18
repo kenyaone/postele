@@ -48,7 +48,27 @@
             <button class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded py-3">Save settings</button>
         </form>
 
-        <form method="POST" action="{{ route('manage.password.update') }}" class="bg-white rounded-xl shadow p-6 space-y-4 mt-6">
+        <form method="POST" action="{{ route('manage.settings.pay') }}" class="bg-white rounded-xl shadow p-6 space-y-4 mt-6">
+    @csrf @method('PATCH')
+    <h2 class="font-semibold">Waiter pay</h2>
+    <p class="text-sm text-gray-500">Only money collected counts: cash and M-Pesa paid on a waiter's bills while their shift is open, plus old credit on the day it is repaid. Saturdays use their own figures.</p>
+    @php $wp = fn ($k) => old($k, \App\Services\WaiterPay::setting($k)); @endphp
+    @if ($errors->hasAny(\App\Models\Setting::PAY))<p class="text-sm text-red-700">{{ collect(\App\Models\Setting::PAY)->map(fn ($k) => $errors->first($k))->filter()->first() }}</p>@endif
+    <div class="grid grid-cols-2 gap-3">
+        <div class="col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Daily pay (KSh)</label><input name="pay_daily" inputmode="decimal" required value="{{ $wp('pay_daily') }}" class="w-full border rounded px-3 py-2"></div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1">Daily-pay target (KSh)</label><input name="pay_threshold" inputmode="decimal" required value="{{ $wp('pay_threshold') }}" class="w-full border rounded px-3 py-2"></div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1">Saturday target (KSh)</label><input name="pay_threshold_sat" inputmode="decimal" required value="{{ $wp('pay_threshold_sat') }}" class="w-full border rounded px-3 py-2"></div>
+        <div class="col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Commission (%)</label><input name="pay_comm_pct" inputmode="decimal" required value="{{ $wp('pay_comm_pct') }}" class="w-full border rounded px-3 py-2"></div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1">Commission on collections above (KSh)</label><input name="pay_comm_from" inputmode="decimal" required value="{{ $wp('pay_comm_from') }}" class="w-full border rounded px-3 py-2"></div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1">Saturday: above (KSh)</label><input name="pay_comm_from_sat" inputmode="decimal" required value="{{ $wp('pay_comm_from_sat') }}" class="w-full border rounded px-3 py-2"></div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1">Caf&eacute; must collect, for any commission (KSh)</label><input name="pay_gate" inputmode="decimal" required value="{{ $wp('pay_gate') }}" class="w-full border rounded px-3 py-2"></div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1">Saturday: caf&eacute; must collect (KSh)</label><input name="pay_gate_sat" inputmode="decimal" required value="{{ $wp('pay_gate_sat') }}" class="w-full border rounded px-3 py-2"></div>
+        <div class="col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Start counting pay from</label><input type="date" name="pay_start" required value="{{ $wp('pay_start') }}" class="w-full border rounded px-3 py-2"></div>
+    </div>
+    <button class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded py-3">Save waiter pay</button>
+</form>
+
+<form method="POST" action="{{ route('manage.password.update') }}" class="bg-white rounded-xl shadow p-6 space-y-4 mt-6">
             @csrf @method('PATCH')
             <h2 class="font-semibold">Your sign-in password</h2>
             <p class="text-sm text-gray-500">

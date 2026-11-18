@@ -152,6 +152,77 @@ class PosController extends Controller
         return redirect()->route('pos.tickets.show', $ticket);
     }
 
+    /** Split a bill: move some dishes to a new bill, so each customer pays for their own food. Only before any payment. */
+    public function splitForm(Request $request, Ticket $ticket)
+    {
+        $this->authorizeTicket($request, $ticket);
+        if ($why = $this->cannotSplit($ticket)) {
+            return redirect()->route('pos.tickets.show', $ticket)->withErrors(['split' => $why]);
+        }
+        $ticket->load('items.item', 'opener');
+        return view('pos.split', ['ticket' => $ticket]);
+    }
+
+    public function split(Request $request, Ticket $ticket)
+    {
+        $this->authorizeTicket($request, $ticket);
+        $data = $request->validate(['move' => 'required|array', 'move.*' => 'nullable|integer|min:0|max:999']);
+
+        try {
+            $new = DB::transaction(function () use ($ticket, $data) {
+                $t = Ticket::lockForUpdate()->findOrFail($ticket->id);
+                if ($why = $this->cannotSplit($t)) throw new \RuntimeException($why);
+                $lines = $t->items()->with('item')->get()->keyBy('id');
+                $moves = collect($data['move'])->map(fn ($q) => (int) $q)->filter(fn ($q) => $q > 0);
+                if ($moves->isEmpty()) throw new \RuntimeException('Choose at least one dish to move to the new bill.');
+                foreach ($moves as $lineId => $q) {
+                    $line = $lines->get((int) $lineId);
+                    if (! $line) throw new \RuntimeException('One of those dishes is no longer on this bill. Go back and try again.');
+                    if ($q > (int) $line->qty) throw new \RuntimeException('You can move at most ' . $line->qty . ' x ' . ($line->item->name ?? 'that dish') . '.');
+                }
+                if ((int) $lines->sum('qty') - (int) $moves->sum() < 1) throw new \RuntimeException('Leave at least one dish on this bill.');
+
+                $new = Ticket::create([
+                    'opened_by' => $t->opened_by,
+                    'status' => $t->status,
+                    'opened_at' => now(),
+                    'notes' => 'Split from bill #' . $t->order_no,
+                    ...(self::hasChannels() ? ['channel' => $t->channel ?? 'house'] : []),
+                ]);
+                foreach ($moves as $lineId => $q) {
+                    $line = $lines->get((int) $lineId);
+                    if ($q === (int) $line->qty) {
+                        $line->update(['ticket_id' => $new->id]);
+                    } else {
+                        $line->update(['qty' => (int) $line->qty - $q]);
+                        TicketItem::create(['ticket_id' => $new->id, 'item_id' => $line->item_id, 'qty' => $q, 'unit_price' => $line->unit_price, 'sent_at' => $line->sent_at]);
+                    }
+                }
+                // A "waiting for the till payment" on the old bill was for the old amount.
+                \App\Models\StkRequest::where('ticket_id', $t->id)->where('phone', 'kk-app')->where('status', 'pending')->update(['status' => 'failed', 'error' => 'Bill was split']);
+                $t->update(['notes' => trim(($t->notes ? $t->notes . ' ' : '') . 'Split: some dishes moved to bill #' . $new->order_no . '.')]);
+                return $new;
+            });
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['split' => $e->getMessage()]);
+        }
+
+        $old = $ticket->fresh(['items']);
+        $new->load('items');
+        return redirect()->route('pos.tickets.show', $new)
+            ->with('ok', 'Bill split. This is the new bill #' . $new->order_no . ' (KSh ' . number_format($new->total) . '). Bill #' . $old->order_no . ' is now KSh ' . number_format($old->total) . '.');
+    }
+
+    /** Why this bill cannot be split right now, or null if it can. */
+    private function cannotSplit(Ticket $t): ?string
+    {
+        if (! in_array($t->status, ['open', 'sent'], true)) return 'This bill is already closed.';
+        if ($t->payments()->exists()) return 'Part of this bill is already paid. Split a bill before taking any payment.';
+        if (\App\Models\StkRequest::where('ticket_id', $t->id)->where('status', 'pending')->where('phone', '!=', 'kk-app')->where('created_at', '>=', now()->subMinutes(3))->exists()) return 'An M-Pesa prompt is waiting on this bill. Wait for it to finish first.';
+        if ((int) $t->items()->sum('qty') < 2) return 'There is only one dish on this bill, so there is nothing to split.';
+        return null;
+    }
+
     /** Browser-printed slips. mode: kot | both (kitchen ticket + bill) | bill | receipt (paid tickets). */
     public function printBill(Request $request, Ticket $ticket)
     {
@@ -176,37 +247,44 @@ class PosController extends Controller
         ]);
     }
 
-    public function closeBill(Request $request, Ticket $ticket, Receipts $receipts)
+    /** Cash. "Part payment" records the cash given now and leaves the rest to pay (by M-Pesa or more cash). */
+    public function closeBill(Request $request, Ticket $ticket, \App\Services\PaymentSettler $settler)
     {
         $this->authorizeTicket($request, $ticket);
         abort_unless($ticket->status === 'sent', 403, 'Send to kitchen first.');
 
-        $data = $request->validate(['cash_received' => 'required|numeric|min:0']);
+        $data = $request->validate(['cash_received' => 'required|numeric|min:0', 'part' => 'nullable|boolean']);
+        $ticket->load('items.item', 'opener', 'payments');
+        $due = $ticket->balance;
+        $cash = round((float) $data['cash_received'], 2);
 
-        $ticket->load('items.item', 'opener');
-        $total = $ticket->total;
-
-        if ($data['cash_received'] < $total) {
-            return back()->withErrors(['cash_received' => 'Cash received (KSh ' . number_format($data['cash_received'], 2) . ') is less than total (KSh ' . number_format($total, 2) . ').']);
+        if ($request->boolean('part') && $cash + 0.004 < $due) {
+            if ($cash <= 0) {
+                return back()->withErrors(['cash_received' => 'Type how much cash the customer is giving now.'])->withInput();
+            }
+            if (\App\Models\StkRequest::where('ticket_id', $ticket->id)->where('status', 'pending')->where('phone', '!=', 'kk-app')->where('created_at', '>=', now()->subMinutes(3))->exists()) {
+                return back()->withErrors(['cash_received' => 'An M-Pesa prompt is waiting on this bill. Wait for it to finish before taking cash.'])->withInput();
+            }
+            try {
+                $settler->settle($ticket, 'cash', $cash, null, auth()->id(), true);
+            } catch (\RuntimeException $e) {
+                return back()->withErrors(['cash_received' => $e->getMessage()])->withInput();
+            }
+            return redirect()->route('pos.tickets.show', $ticket)
+                ->with('ok', 'KSh ' . number_format($cash) . ' cash recorded. KSh ' . number_format(round($due - $cash, 2)) . ' left to pay: take it by M-Pesa or cash.');
         }
 
-        DB::transaction(function () use ($ticket, $total, $receipts) {
-            $payment = Payment::create([
-                'ticket_id'   => $ticket->id,
-                'method'      => 'cash',
-                'amount'      => $total,
-                'received_at' => now(),
-                'matched_at'  => now(),
-                'matched_by'  => auth()->id(),
-            ]);
+        if ($cash + 0.004 < $due) {
+            return back()->withErrors(['cash_received' => 'Cash received (KSh ' . number_format($cash, 2) . ') is less than ' . ($ticket->payments->isNotEmpty() ? 'what is left to pay' : 'the total') . ' (KSh ' . number_format($due, 2) . '). Tick "Part payment" to take the rest by M-Pesa.'])->withInput();
+        }
 
-            $ticket->update(['status' => 'paid', 'closed_at' => now()]);
+        try {
+            $settler->settle($ticket, 'cash', $due, null, auth()->id());
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['cash_received' => $e->getMessage()])->withInput();
+        }
 
-            app(\App\Services\PrintRouter::class)->cashier($receipts->buildReceipt($ticket->fresh('items.item', 'opener'), $payment), true, $ticket->id);
-        });
-
-        $change = $data['cash_received'] - $total;
-        return redirect()->route('pos.tickets.show', $ticket)->with('change', $change);
+        return redirect()->route('pos.tickets.show', $ticket)->with('change', $cash - $due);
     }
 
     /** Cancel an order. Before the kitchen: the waiter's own call. After: reason + manager approval, and a CANCELLED slip prints. */
@@ -214,6 +292,9 @@ class PosController extends Controller
     {
         $this->authorizeTicket($request, $ticket);
         abort_unless(in_array($ticket->status, ['open', 'sent'], true), 403, 'This order can no longer be cancelled.');
+        if ($ticket->payments()->exists()) {
+            return back()->withErrors(['split' => 'Part of this bill is already paid, so it cannot be cancelled. Take the rest of the payment, or ask the manager.']);
+        }
         $user = $request->user();
         $sent = $ticket->status === 'sent';
 

@@ -12,6 +12,28 @@
 @include('manage.partials.yield-alerts')
     <p class="text-sm text-gray-500 -mt-4 mb-6">{{ now()->format('l, j F Y \a\t H:i') }}</p>
 
+    {{-- REVENUE: every bill sent out, paid or not (cancelled bills and dishes left out) --}}
+    <div class="bg-white rounded-xl shadow p-4 mb-4 grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+            <div class="text-xs uppercase text-gray-500">Revenue today (all bills)</div>
+            <div class="text-2xl font-bold text-gray-900">{{ $ksh($revToday->total) }}</div>
+        </div>
+        <div>
+            <div class="text-xs uppercase text-gray-500">Paid &amp; on account</div>
+            <div class="text-lg font-bold text-emerald-700">{{ $ksh($revToday->paid) }}</div>
+        </div>
+        <div>
+            <div class="text-xs uppercase text-gray-500">Unpaid bills</div>
+            <div class="text-lg font-bold {{ $revToday->unpaid > 0 ? 'text-orange-700' : 'text-gray-400' }}">{{ $ksh($revToday->unpaid) }}</div>
+            <div class="text-xs text-gray-500">{{ $revToday->unpaidBills }} bill{{ $revToday->unpaidBills === 1 ? '' : 's' }} waiting for payment</div>
+        </div>
+        <div>
+            <div class="text-xs uppercase text-gray-500">{{ now()->format('F') }} revenue</div>
+            <div class="text-lg font-bold text-gray-900">{{ $ksh($revMonth->total) }}</div>
+            <div class="text-xs text-gray-500">{{ $ksh($revMonth->unpaid) }} unpaid</div>
+        </div>
+    </div>
+
     {{-- TODAY --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <div class="bg-white rounded-xl shadow p-4">

@@ -20,7 +20,7 @@
                 <li class="py-2 flex justify-between gap-3"><span>{{ $l->qty }} x {{ \Illuminate\Support\Str::after($l->item->name ?? '', 'Glovo: ') }}</span><span class="tabular-nums">{{ number_format($l->qty * $l->unit_price) }}</span></li>
             @endforeach
         </ul>
-        <div class="mt-3 pt-3 border-t-2 border-dashed flex justify-between items-end"><span class="font-semibold">Total</span><span class="text-3xl font-extrabold">KSh {{ number_format(ceil($t->total)) }}</span></div>
+        <div class="mt-3 pt-3 border-t-2 border-dashed flex justify-between items-end"><span class="font-semibold">Total</span><span class="text-3xl font-extrabold">KSh {{ number_format(ceil($t->balance)) }}</span></div>
     </div>
 
     <div id="state" class="mt-4">
@@ -42,8 +42,8 @@
                     <input name="phone" type="tel" inputmode="numeric" autocomplete="tel" required value="{{ old('phone') }}" placeholder="0712 345 678" class="mt-1 w-full rounded-2xl border-2 border-[#2b1b14]/15 px-4 py-4 text-xl tracking-wider focus:border-[#f5a524] focus:outline-none">
                 </label>
                 @error('phone')<p class="text-sm font-semibold text-red-700">{{ $message }}</p>@enderror
-                <button class="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-lg font-extrabold py-4" @disabled(! $ready)>{{ session('sent') ? 'Send the prompt again' : 'Pay KSh ' . number_format(ceil($t->total)) . ' with M-Pesa' }}</button>
-                <p class="text-xs text-center text-gray-500">You will get an M-Pesa prompt. Enter your PIN and this bill is marked paid. Or pay Till {{ config('pos.till_number') }} and show the waiter your message.</p>
+                <button class="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-lg font-extrabold py-4" @disabled(! $ready)>{{ session('sent') ? 'Send the prompt again' : 'Pay KSh ' . number_format(ceil($t->balance)) . ' with M-Pesa' }}</button>
+                <p class="text-xs text-center text-gray-500">You will get an M-Pesa prompt. Enter your PIN and this bill is marked paid. If the prompt does not come, ask the waiter to send it to your phone.</p>
             </form>
         @endif
     </div>

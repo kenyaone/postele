@@ -30,14 +30,14 @@ class MpesaController extends Controller
             $t = Ticket::findByOrderNo($no);
             if (! $t) return back()->withInput()->withErrors(['phone' => "There is no order {$no}."]);
             if (! in_array($t->status, ['open', 'sent'], true)) return back()->withInput()->withErrors(['phone' => "Order {$t->order_no} is already " . ($t->status === 'paid' ? 'paid' : 'closed') . '.']);
-            if (! $bills->contains('id', $t->id)) $bills->push($t->load('items'));
+            if (! $bills->contains('id', $t->id)) $bills->push($t->load(['items', 'payments']));
         }
         if ($bills->count() > 20) return back()->withInput()->withErrors(['phone' => 'One prompt can pay at most 20 orders.']);
-        $amount = (int) ceil($bills->sum(fn ($t) => $t->total));
+        $amount = (int) ceil($bills->sum(fn ($t) => $t->balance));
         if ($amount < 1) return back()->withInput()->withErrors(['phone' => 'Nothing to pay on ' . ($bills->count() > 1 ? 'these orders' : 'this order') . ' yet.']);
 
         $stk = StkRequest::create(['ticket_id' => $ticket->id, 'phone' => $phone, 'amount' => $amount, 'status' => 'pending', 'requested_by' => $request->user()->id]);
-        $extra = $bills->slice(1)->map(fn ($t) => StkRequest::create(['ticket_id' => $t->id, 'phone' => $phone, 'amount' => (int) ceil($t->total), 'status' => 'pending', 'requested_by' => $request->user()->id]));
+        $extra = $bills->slice(1)->map(fn ($t) => StkRequest::create(['ticket_id' => $t->id, 'phone' => $phone, 'amount' => (int) ceil($t->balance), 'status' => 'pending', 'requested_by' => $request->user()->id]));
 
         try {
             $location = $kk->stkPush($stk, $bills->pluck('order_no')->all());
@@ -51,7 +51,7 @@ class MpesaController extends Controller
             return back()->withErrors(['phone' => 'Could not send the M-Pesa prompt. Try again, or use another way to pay.']);
         }
 
-        return redirect()->route('pos.tickets.show', $ticket)
+        return ($request->input('from') === 'collect' ? redirect()->route('pos.collect') : redirect()->route('pos.tickets.show', $ticket))
             ->with('ok', 'M-Pesa prompt for KSh ' . number_format($amount) . ' sent to ' . $data['phone']
                 . ($bills->count() > 1 ? ' for ' . $bills->count() . ' orders (' . $bills->map->order_no->implode(', ') . ')' : '')
                 . '. Ask the customer to enter their PIN.');
@@ -65,15 +65,15 @@ class MpesaController extends Controller
     public function awaitTill(Request $request, Ticket $ticket, PaymentSettler $settler)
     {
         $this->authorizeTicket($request, $ticket);
-        $ticket->load('items');
-        if (! in_array($ticket->status, ['open', 'sent'], true) || $ticket->total <= 0) {
+        $ticket->load(['items', 'payments']);
+        if (! in_array($ticket->status, ['open', 'sent'], true) || $ticket->balance <= 0) {
             return back()->withErrors(['mpesa' => 'This bill has nothing left to pay.']);
         }
         StkRequest::where('ticket_id', $ticket->id)->where('phone', 'kk-app')->where('status', 'pending')->update(['status' => 'failed', 'error' => 'Replaced']);
 
         $event = KkEvent::where('event_type', 'buygoods_transaction_received')->where('status', 'pending')
             ->where('created_at', '>=', now()->subMinutes(20))->orderBy('id')->get()
-            ->first(fn ($e) => abs((float) $e->amount - (float) $ticket->total) < 0.01 && ! Payment::where('kk_reference', $e->reference)->exists());
+            ->first(fn ($e) => abs((float) $e->amount - (float) $ticket->balance) < 0.01 && ! Payment::where('kk_reference', $e->reference)->exists());
         if ($event) {
             try {
                 $settler->settle($ticket, 'kk_till_auto', (float) $event->amount, $event->reference, $request->user()->id);
@@ -82,8 +82,8 @@ class MpesaController extends Controller
             } catch (RuntimeException $e) { /* fall through and wait */ }
         }
 
-        StkRequest::create(['ticket_id' => $ticket->id, 'phone' => 'kk-app', 'amount' => (int) ceil($ticket->total), 'status' => 'pending', 'requested_by' => $request->user()->id]);
-        return redirect()->route('pos.tickets.show', $ticket)->with('ok', 'Waiting for KSh ' . number_format($ticket->total) . ' from the Kopo Kopo app. The bill clears itself when the money arrives.');
+        StkRequest::create(['ticket_id' => $ticket->id, 'phone' => 'kk-app', 'amount' => (int) ceil($ticket->balance), 'status' => 'pending', 'requested_by' => $request->user()->id]);
+        return redirect()->route('pos.tickets.show', $ticket)->with('ok', 'Waiting for KSh ' . number_format($ticket->balance) . ' from the Kopo Kopo app. The bill clears itself when the money arrives.');
     }
 
     public function stkStatus(Request $request, Ticket $ticket)
@@ -101,16 +101,19 @@ class MpesaController extends Controller
         if (! $event) return back()->withErrors(['mpesa' => 'That M-Pesa payment is no longer available. It may already be matched.']);
 
         $bills = $this->billsFor($request, $ticket);
-        $sum   = (float) $bills->sum(fn ($t) => $t->total);
-        if ((float) $event->amount + 0.004 < $sum) {
+        $sum = (float) $bills->sum(fn ($t) => $t->balance);
+        if ((float) $event->amount + 0.004 < $sum && ! ($request->boolean('part') && $bills->count() === 1)) {
             return back()->withErrors(['mpesa' => 'KSh ' . number_format($event->amount) . ' is less than ' . ($bills->count() > 1 ? 'the ' . $bills->count() . ' bills together' : 'the bill') . ' (KSh ' . number_format($sum) . ').']);
         }
         try {
-            $settler->settleMany($bills, 'kk_till_auto', (float) $event->amount, $event->reference, $request->user()->id);
+            $part = (float) $event->amount + 0.004 < $sum;
+            if ($part) $settler->settle($ticket, 'kk_till_auto', (float) $event->amount, $event->reference, $request->user()->id, true);
+            else $settler->settleMany($bills, 'kk_till_auto', (float) $event->amount, $event->reference, $request->user()->id);
         } catch (RuntimeException $e) {
             return back()->withErrors(['mpesa' => $e->getMessage()]);
         }
         $event->update(['status' => 'matched']);
+        if ($part) return redirect()->route('pos.tickets.show', $ticket)->with('ok', "M-Pesa {$event->reference} (KSh " . number_format((float) $event->amount) . ') recorded as part payment. KSh ' . number_format(round($sum - (float) $event->amount, 2)) . ' left to pay.');
         return redirect()->route('pos.tickets.show', $ticket)->with('ok', "M-Pesa {$event->reference} matched. " . ($bills->count() > 1 ? $bills->count() . ' bills paid: ' . $bills->map->order_no->implode(', ') : 'Bill paid.'));
     }
 
@@ -123,7 +126,7 @@ class MpesaController extends Controller
         $code = strtoupper($data['code']);
 
         $bills = $this->billsFor($request, $ticket);
-        $sum   = (float) $bills->sum(fn ($t) => $t->total);
+        $sum = (float) $bills->sum(fn ($t) => $t->balance);
 
         // A typed code is only accepted once Kopo Kopo has actually received that payment.
         $event = KkEvent::where('event_type', 'buygoods_transaction_received')->where('reference', $code)->latest('id')->first();
@@ -133,15 +136,18 @@ class MpesaController extends Controller
         if ($event->status !== 'pending') {
             return back()->withInput()->withErrors(['mpesa' => "M-Pesa {$code} has already been used for another bill."]);
         }
-        if ((float) $event->amount + 0.004 < $sum) {
+        if ((float) $event->amount + 0.004 < $sum && ! ($request->boolean('part') && $bills->count() === 1)) {
             return back()->withInput()->withErrors(['mpesa' => "M-Pesa {$code} was KSh " . number_format((float) $event->amount) . ', less than ' . ($bills->count() > 1 ? 'the ' . $bills->count() . ' bills together' : 'the bill') . ' (KSh ' . number_format($sum) . ').']);
         }
         try {
-            $settler->settleMany($bills, 'kk_till_auto', (float) $event->amount, $code, $request->user()->id);
+            $part = (float) $event->amount + 0.004 < $sum;
+            if ($part) $settler->settle($ticket, 'kk_till_auto', (float) $event->amount, $code, $request->user()->id, true);
+            else $settler->settleMany($bills, 'kk_till_auto', (float) $event->amount, $code, $request->user()->id);
         } catch (RuntimeException $e) {
             return back()->withErrors(['mpesa' => $e->getMessage()]);
         }
         $event->update(['status' => 'matched']);
+        if ($part) return redirect()->route('pos.tickets.show', $ticket)->with('ok', "M-Pesa {$code} (KSh " . number_format((float) $event->amount) . ') recorded as part payment. KSh ' . number_format(round($sum - (float) $event->amount, 2)) . ' left to pay.');
         return redirect()->route('pos.tickets.show', $ticket)->with('ok', "M-Pesa {$code} confirmed by Kopo Kopo. " . ($bills->count() > 1 ? $bills->count() . ' bills paid: ' . $bills->map->order_no->implode(', ') : 'Bill paid.'));
     }
 
@@ -149,9 +155,9 @@ class MpesaController extends Controller
     private function billsFor(Request $request, Ticket $ticket)
     {
         $ids = collect((array) $request->input('also', []))->map(fn ($v) => (int) $v)->filter()->reject(fn ($id) => $id === $ticket->id)->unique()->take(20);
-        $others = Ticket::with('items')->whereIn('id', $ids)->whereIn('status', ['open', 'sent'])->get()
+        $others = Ticket::with(['items', 'payments'])->whereIn('id', $ids)->whereIn('status', ['open', 'sent'])->get()
             ->filter(fn ($t) => $request->user()->role === 'manager' || $t->opened_by === $request->user()->id);
-        return collect([$ticket->load('items')])->merge($others)->values();
+        return collect([$ticket->load(['items', 'payments'])])->merge($others)->values();
     }
 
     private function authorizeTicket(Request $request, Ticket $ticket): void

@@ -18,7 +18,7 @@ class CreditController extends Controller
         $user = $request->user();
         abort_unless($user->role === 'manager' || $ticket->opened_by === $user->id, 403, 'Not your ticket.');
         abort_unless($ticket->status === 'sent', 403, 'Send the order to the kitchen first.');
-        $ticket->load('items');
+        $ticket->load(['items', 'payments']);
 
         if (($ticket->channel ?? 'house') === 'glovo') {
             $customer = Customer::where('is_platform', true)->where('name', 'Glovo')->firstOrFail();
@@ -47,7 +47,7 @@ class CreditController extends Controller
             $due = $data['due_on'] ?? null;
         }
 
-        $total = round((float) $ticket->total, 2);
+        $total = round((float) $ticket->balance, 2);
         DB::transaction(function () use ($ticket, $settler, $customer, $total, $due, $user) {
             $settler->settle($ticket, 'credit', $total, null, $user->id);
             CreditSale::create(['ticket_id' => $ticket->id, 'customer_id' => $customer->id, 'amount' => $total, 'due_on' => $due, 'recorded_by' => $user->id]);

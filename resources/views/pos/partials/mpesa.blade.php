@@ -5,11 +5,11 @@
     $appWait    = $stkLatest && $stkLatest->status === 'pending' && $stkLatest->phone === 'kk-app' && $stkLatest->created_at->gt(now()->subMinutes(20));
     $mpesaEvents = \App\Models\KkEvent::where('event_type', 'buygoods_transaction_received')->where('status', 'pending')
         ->where('received_at', '>=', now()->subHours(3))->orderByDesc('received_at')->limit(8)->get();
-    $billKsh = (int) ceil($ticket->total);
-    $otherBills = \App\Models\Ticket::with('items', 'opener')->whereIn('status', ['open', 'sent'])->where('id', '!=', $ticket->id)
+    $billKsh = (int) ceil($ticket->balance);
+    $otherBills = \App\Models\Ticket::with('items', 'opener', 'payments')->whereIn('status', ['open', 'sent'])->where('id', '!=', $ticket->id)
         ->where('created_at', '>=', now()->subHours(12))
         ->when(auth()->user()->role !== 'manager', fn ($q) => $q->where('opened_by', auth()->id()))
-        ->orderByDesc('id')->limit(15)->get()->filter(fn ($t) => $t->total > 0);
+        ->orderByDesc('id')->limit(15)->get()->filter(fn ($t) => $t->balance > 0);
 @endphp
 <div class="space-y-3">
     @if ($stkWait)
@@ -56,9 +56,9 @@
             <div class="mt-2 space-y-1">
                 @foreach ($otherBills as $ob)
                     <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-green-50">
-                        <input type="checkbox" class="also-bill w-5 h-5 accent-green-600" value="{{ $ob->id }}" data-total="{{ (float) $ob->total }}">
+                        <input type="checkbox" class="also-bill w-5 h-5 accent-green-600" value="{{ $ob->id }}" data-total="{{ (float) $ob->balance }}">
                         <span class="flex-1 min-w-0 truncate"><b>{{ $ob->order_no }}</b> <span class="text-xs text-roast/60">{{ $ob->opener?->name }} &middot; {{ $ob->items->whereNull('void_at')->map(fn ($i) => $i->qty . ' ' . ($i->item->name ?? ''))->take(3)->implode(', ') }}</span></span>
-                        <span class="font-semibold shrink-0">KSh {{ number_format($ob->total) }}</span>
+                        <span class="font-semibold shrink-0">KSh {{ number_format($ob->balance) }}</span>
                     </label>
                 @endforeach
             </div>
@@ -94,6 +94,7 @@
             <div class="text-xs font-bold uppercase tracking-wider text-roast/60"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-green-600 text-white mr-1">2</span> Paid Till {{ config('pos.till_number') }}? Tap it</div>
             <a href="{{ url()->current() }}" class="text-xs font-semibold text-green-700 hover:underline">&#8635; Refresh</a>
         </div>
+        <label class="flex items-center gap-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 px-3 py-2 mb-2 text-sm font-semibold cursor-pointer"><input type="checkbox" id="mp-part" class="w-5 h-5 accent-amber-600"> Customer is paying only part by M-Pesa (the rest by cash)</label>
         @if ($mpesaEvents->isEmpty())
             <p class="text-sm text-roast/60 py-2 text-center">No new till payments in the last 3 hours.</p>
         @else
@@ -101,8 +102,8 @@
                 @php
                     $r = $ev->raw_payload['event']['resource'] ?? [];
                     $who = trim(($r['sender_first_name'] ?? '') . ' ' . ($r['sender_last_name'] ?? ''));
-                    $enough = (float) $ev->amount + 0.004 >= $ticket->total;
-                    $exact = abs((float) $ev->amount - $ticket->total) < 0.005;
+                    $enough = (float) $ev->amount + 0.004 >= $ticket->balance;
+                    $exact = abs((float) $ev->amount - $ticket->balance) < 0.005;
                 @endphp
                 <form method="POST" action="{{ route('pos.tickets.mpesa.match', $ticket) }}" class="mp-pay" data-ref="{{ $ev->reference }}">
                     @csrf
@@ -135,8 +136,9 @@
 </div>
 <script>
 (function () {
-    var base = {{ (float) $ticket->total }};
+    var base = {{ (float) $ticket->balance }};
     function picked() { return Array.prototype.slice.call(document.querySelectorAll('.also-bill:checked')); }
+    function partOn() { var p = document.getElementById('mp-part'); return !! (p && p.checked) && picked().length === 0; }
     function total() { return picked().reduce(function (s, b) { return s + parseFloat(b.dataset.total || 0); }, base); }
     function refresh() {
         var t = total(), el = document.getElementById('multiTotal');
@@ -144,19 +146,22 @@
         var sa = document.getElementById('stkAmt'); if (sa) sa.textContent = Math.round(t).toLocaleString();
         document.querySelectorAll('.mp-pay button[data-amount]').forEach(function (btn) {
             var a = parseFloat(btn.dataset.amount), exact = Math.abs(a - t) < 0.01, enough = a + 0.004 >= t;
-            btn.disabled = ! enough;
+            btn.disabled = ! enough && ! partOn();
             btn.classList.toggle('ring-2', exact); btn.classList.toggle('ring-green-500', exact); btn.classList.toggle('bg-green-50', exact);
             var tag = btn.querySelector('.mp-tag');
-            if (tag) { tag.innerHTML = exact ? '&#10003; EXACT' : (enough ? '' : 'too little'); tag.className = 'mp-tag text-[11px] font-bold ' + (exact ? 'text-green-700' : 'text-red-600'); }
+            if (tag) { tag.innerHTML = exact ? '&#10003; EXACT' : (enough ? '' : (partOn() ? 'part' : 'too little')); tag.className = 'mp-tag text-[11px] font-bold ' + (exact ? 'text-green-700' : 'text-red-600'); }
         });
     }
     document.querySelectorAll('.also-bill').forEach(function (b) { b.addEventListener('change', refresh); });
+    var mpPart = document.getElementById('mp-part'); if (mpPart) mpPart.addEventListener('change', refresh);
     document.querySelectorAll('form.mp-pay').forEach(function (f) {
         f.addEventListener('submit', function (e) {
             var n = picked().length;
             if (f.dataset.ref && ! confirm('Use M-Pesa ' + f.dataset.ref + ' for ' + (n ? (n + 1) + ' bills (KSh ' + Math.round(total()).toLocaleString() + ')' : 'this bill') + '?')) { e.preventDefault(); return; }
             f.querySelectorAll('input[name="also[]"]').forEach(function (x) { x.remove(); });
             picked().forEach(function (b) { var h = document.createElement('input'); h.type = 'hidden'; h.name = 'also[]'; h.value = b.value; f.appendChild(h); });
+            f.querySelectorAll('input[name="part"]').forEach(function (x) { x.remove(); });
+            if (partOn()) { var hp = document.createElement('input'); hp.type = 'hidden'; hp.name = 'part'; hp.value = '1'; f.appendChild(hp); }
         });
     });
 })();

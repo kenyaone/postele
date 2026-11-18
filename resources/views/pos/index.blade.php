@@ -41,7 +41,7 @@
             @endif
         @endisset
         <nav class="ml-auto flex items-center gap-1 text-sm">
-            <form method="GET" action="{{ route('pos.find') }}" class="flex"><input name="no" autocomplete="off" placeholder="Find bill: {{ now()->format('d-m-Y') }}-007" class="w-36 sm:w-56 rounded-xl bg-white/10 px-3 py-2 text-sm text-crema placeholder:text-crema/50 focus:bg-white focus:text-espresso focus:outline-none"></form><a href="{{ route('pos.history') }}" class="hidden sm:block rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#128338; History</a><a href="{{ route('pos.pin') }}" title="Change my PIN" class="hidden sm:block rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#128273; PIN</a>@if (\Illuminate\Support\Facades\Schema::hasTable('credit_sales'))<a href="{{ route('pos.debts') }}" class="hidden sm:block rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#128221; Debts</a>@endif<a href="{{ route('pos.bills') }}" class="rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#129534; Bills @if ($openBills)<span class="ml-0.5 bg-saffron text-espresso text-xs font-extrabold rounded-full px-1.5">{{ $openBills }}</span>@endif</a>
+            <form method="GET" action="{{ route('pos.find') }}" class="flex"><input name="no" autocomplete="off" placeholder="Find bill: {{ now()->format('d-m-Y') }}-007" class="w-36 sm:w-56 rounded-xl bg-white/10 px-3 py-2 text-sm text-crema placeholder:text-crema/50 focus:bg-white focus:text-espresso focus:outline-none"></form><a href="{{ route('pos.collect') }}" class="rounded-xl px-3 py-2 bg-saffron text-espresso font-bold whitespace-nowrap">&#128242; Collect</a><a href="{{ route('pos.history') }}" class="hidden sm:block rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#128338; History</a><a href="{{ route('pos.pin') }}" title="Change my PIN" class="hidden sm:block rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#128273; PIN</a>@if ($me->role === 'waiter')<a href="{{ route('pos.mypay') }}" class="hidden sm:block rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#128176; My pay</a>@endif @if (\Illuminate\Support\Facades\Schema::hasTable('credit_sales'))<a href="{{ route('pos.debts') }}" class="hidden sm:block rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#128221; Debts</a>@endif<a href="{{ route('pos.bills') }}" class="rounded-xl px-3 py-2 hover:bg-white/10 font-semibold">&#129534; Bills @if ($openBills)<span class="ml-0.5 bg-saffron text-espresso text-xs font-extrabold rounded-full px-1.5">{{ $openBills }}</span>@endif</a>
             @if ($me->role === 'manager')<a href="{{ route('manage.index') }}" class="hidden sm:block rounded-xl px-3 py-2 hover:bg-white/10">Manage</a>@endif
             <span class="hidden md:flex items-center gap-2 pl-3 ml-1 border-l border-white/15">
                 <span class="w-8 h-8 rounded-full bg-roast grid place-items-center font-bold">{{ strtoupper(mb_substr($me->name, 0, 1)) }}</span>
@@ -51,6 +51,10 @@
         </nav>
     </div>
 </header>
+@php $payToday = ($me && $me->role === 'waiter') ? rescue(fn () => app(\App\Services\WaiterPay::class)->today($me->id), null, false) : null; @endphp
+@if ($payToday)
+<a href="{{ route('pos.mypay') }}" class="block bg-emerald-900 hover:bg-emerald-800 text-emerald-50 text-sm px-4 py-1.5 text-center">Today: <b>KSh {{ number_format($payToday['collected']) }}</b> collected &middot; {{ $payToday['next'] }} <span class="underline font-semibold whitespace-nowrap">My pay &rsaquo;</span></a>
+@endif
 
 @if (session('ok') || session('change') !== null || $errors->any())
     <div class="px-4 pt-3 space-y-2">
@@ -138,12 +142,13 @@
                         <form method="POST" action="{{ route('pos.tickets.send', $ticket) }}">@csrf<button {{ $empty ? 'disabled' : '' }} class="w-full rounded-xl py-2.5 text-sm font-semibold bg-crema hover:bg-amber-50 ring-1 ring-roast/15 disabled:opacity-40">&#127859; Kitchen only</button></form>
                         <button type="button" onclick="printBill('{{ route('pos.tickets.bill', $ticket) }}')" {{ $empty ? 'disabled' : '' }} class="w-full rounded-xl py-2.5 text-sm font-semibold bg-crema hover:bg-amber-50 ring-1 ring-roast/15 disabled:opacity-40">&#129534; Print bill</button>
                     </div>
+                    @if ((int) $ticket->items->sum('qty') > 1)<a href="{{ route('pos.tickets.split', $ticket) }}" class="mt-2 block text-center text-sm font-semibold text-roast hover:underline">&#9986; Split bill</a>@endif
                     <form method="POST" action="{{ route('pos.tickets.void', $ticket) }}" onsubmit="return confirm('Cancel this whole order?');" class="mt-3 text-center">@csrf<button class="text-xs text-red-600 hover:underline">Cancel order</button></form>
                 @elseif ($ticket->status === 'sent')
                     @php
                         $sentAt = $ticket->items->pluck('sent_at')->filter()->max();
                         $payTab = ($errors->has('cash_received') || old('cash_received') !== null) ? 'cash' : 'mpesa'; if (old('credit_form') || $errors->has('credit')) $payTab = 'credit';
-                        $t = (int) ceil($ticket->total);
+                        $t = (int) ceil($ticket->balance);
                         $quick = collect([$t, (int) (ceil($t / 50) * 50), (int) (ceil($t / 100) * 100), (int) (ceil($t / 500) * 500), 1000, 2000])->filter(fn ($a) => $a >= $t)->unique()->take(4)->values();
                     @endphp
                     <div class="flex items-center justify-between gap-2 text-sm bg-amber-50 text-amber-900 rounded-xl px-3 py-2 mb-3">
@@ -151,6 +156,14 @@
                         @include('pos.partials.print-status')
                     </div>
                     @if ($ticket->payments->isEmpty())<form method="POST" action="{{ route('pos.tickets.reopen', $ticket) }}" class="mb-3">@csrf<button class="w-full rounded-xl py-2.5 text-sm font-bold bg-white ring-2 ring-roast/15 hover:bg-crema">&#43; Add more items</button></form>@endif
+                    @if ($ticket->payments->isEmpty() && (int) $ticket->items->sum('qty') > 1)<a href="{{ route('pos.tickets.split', $ticket) }}" class="mb-3 block w-full rounded-xl py-2.5 text-center text-sm font-bold bg-white ring-2 ring-roast/15 hover:bg-crema">&#9986; Split bill<span class="block text-xs font-normal opacity-70">Move some dishes to a new bill, so each person pays their own</span></a>@endif
+                    @if ($ticket->payments->isNotEmpty())
+                    <div class="mb-3 rounded-2xl bg-amber-50 ring-1 ring-amber-200 p-3 text-sm">
+                    <div class="font-bold text-amber-900 mb-1">Part paid</div>
+                    @foreach ($ticket->payments as $p)<div class="flex justify-between gap-2"><span>{{ ['cash' => 'Cash', 'credit' => 'On account', 'kk_stk' => 'M-Pesa', 'kk_till_auto' => 'M-Pesa Till', 'kk_till_manual' => 'M-Pesa Till'][$p->method] ?? $p->method }}@if ($p->kk_reference) <span class="font-mono text-xs">{{ $p->kk_reference }}</span>@endif</span><span class="font-semibold">KSh {{ number_format((float) $p->amount) }}</span></div>@endforeach
+                    <div class="flex justify-between border-t border-amber-200 mt-1 pt-1 font-extrabold text-amber-900"><span>Left to pay</span><span>KSh {{ number_format($ticket->balance) }}</span></div>
+                    </div>
+                    @endif
                     <a href="{{ route('pos.index') }}" class="mb-3 block w-full rounded-xl py-2.5 text-center text-sm font-bold bg-white ring-2 ring-roast/15 hover:bg-crema">&#8594; Pay later, take next order<span class="block text-xs font-normal opacity-70">This bill stays in Bills until it is paid</span></a>
                     @if ($isGlovo) @include('pos.partials.glovo-pay') @else
 <div class="text-xs font-bold uppercase tracking-wider text-roast/60 mb-2">How is the customer paying?</div>
@@ -163,7 +176,7 @@
                         @include('pos.partials.mpesa')
                     </div>
                     <div data-paypane="cash" class="{{ $payTab === 'cash' ? '' : 'hidden' }}">
-                        <form method="POST" action="{{ route('pos.tickets.close', $ticket) }}" id="cash-form" data-total="{{ $ticket->total }}" class="space-y-3">
+                        <form method="POST" action="{{ route('pos.tickets.close', $ticket) }}" id="cash-form" data-total="{{ $ticket->balance }}" class="space-y-3">
                             @csrf
                             <label class="block"><span class="text-xs font-bold uppercase tracking-wider text-roast/60">Cash received (KSh)</span>
                                 <input id="cash-in" data-keypad="money" data-keypad-label="Cash received" type="number" name="cash_received" step="0.01" min="0" required inputmode="decimal" value="{{ old('cash_received', (string) $t) }}" class="mt-1 w-full rounded-2xl ring-1 ring-roast/20 px-4 py-3 text-3xl font-display font-extrabold text-right focus:outline-none focus:ring-2 focus:ring-saffron">
@@ -172,7 +185,8 @@
                                 @foreach ($quick as $amt)<button type="button" data-cash="{{ $amt }}" class="rounded-xl bg-crema ring-1 ring-roast/15 py-2 text-sm font-bold hover:bg-amber-50">{{ number_format($amt) }}</button>@endforeach
                             </div>
                             <div class="flex justify-between items-center rounded-xl bg-emerald-50 px-4 py-2"><span class="text-sm text-emerald-900">Change to give</span><span id="cash-change" class="font-display text-2xl font-extrabold text-emerald-800">KSh 0</span></div>
-                            <button class="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-lg py-4 shadow-md">&#128181; Close bill (cash)</button>
+                            <label class="flex items-center gap-2 rounded-xl bg-white ring-1 ring-roast/15 px-3 py-2.5 text-sm font-semibold cursor-pointer"><input type="checkbox" name="part" value="1" id="cash-part" class="w-5 h-5 accent-amber-600" @checked(old('part'))> Part payment: the rest will be paid by M-Pesa or more cash</label>
+                            <button id="cash-submit" class="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-lg py-4 shadow-md">&#128181; Close bill (cash)</button>
                         </form>
                     </div>
                     @if ($houseCredit)<div data-paypane="credit" class="{{ $payTab === 'credit' ? '' : 'hidden' }}">@include('pos.partials.credit')</div>@endif
@@ -217,6 +231,7 @@
                             <div class="mt-1 text-sm">{{ $pay->method === 'credit' ? 'On account: ' . optional(optional($ticket->creditSale)->customer)->name : 'Paid in cash' }}</div>
                         @endif
                     </div>
+                    @if ($ticket->payments->count() > 1)<div class="mb-3 rounded-xl bg-emerald-50 ring-1 ring-emerald-200 p-3 text-sm">@foreach ($ticket->payments as $p)<div class="flex justify-between gap-2"><span>{{ ['cash' => 'Cash', 'credit' => 'On account', 'kk_stk' => 'M-Pesa', 'kk_till_auto' => 'M-Pesa Till', 'kk_till_manual' => 'M-Pesa Till'][$p->method] ?? $p->method }}@if ($p->kk_reference) <span class="font-mono text-xs">{{ $p->kk_reference }}</span>@endif</span><span class="font-semibold">KSh {{ number_format((float) $p->amount) }}</span></div>@endforeach</div>@endif
                     <button type="button" onclick="printBill('{{ route('pos.tickets.bill', [$ticket, 'mode' => 'receipt']) }}')" class="w-full rounded-xl py-2.5 text-sm font-semibold bg-crema hover:bg-amber-50 ring-1 ring-roast/15 mb-2">&#129534; Print receipt</button>
                     <form method="POST" action="{{ route('pos.tickets.store') }}">@csrf<button class="w-full rounded-2xl bg-saffron hover:bg-amber-400 text-espresso font-extrabold text-lg py-4 shadow-md">+ New order</button></form>
                 @endif
@@ -257,10 +272,13 @@
             var total = parseFloat(form.dataset.total) || 0;
             var upd = function () {
                 var ch = (parseFloat(cash.value) || 0) - total;
-                out.textContent = 'KSh ' + Math.abs(ch).toLocaleString(undefined, { maximumFractionDigits: 2 }) + (ch < 0 ? ' short' : '');
+                var cpart = document.getElementById('cash-part'), cbtn = document.getElementById('cash-submit'), isPart = !! (cpart && cpart.checked && ch < 0);
+                out.textContent = 'KSh ' + Math.abs(ch).toLocaleString(undefined, { maximumFractionDigits: 2 }) + (ch < 0 ? (isPart ? ' still to pay' : ' short') : '');
+                if (cbtn) cbtn.innerHTML = isPart ? '&#128181; Record part payment' : '&#128181; Close bill (cash)';
                 out.classList.toggle('text-red-700', ch < 0); out.classList.toggle('text-emerald-800', ch >= 0);
             };
             cash.addEventListener('input', upd);
+            var cpartBox = document.getElementById('cash-part'); if (cpartBox) cpartBox.addEventListener('change', upd);
             document.querySelectorAll('[data-cash]').forEach(function (b) { b.addEventListener('click', function () { cash.value = b.dataset.cash; upd(); }); });
             upd();
         }

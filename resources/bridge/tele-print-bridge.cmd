@@ -1,16 +1,39 @@
 <# : Tele Cafe print bridge - double-click to start. Keep this window open.
 @echo off
 title Tele Cafe print bridge
-set "TCSU=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\tele-print-bridge.cmd"
-if /I not "%~f0"=="%TCSU%" copy /Y "%~f0" "%TCSU%" >nul 2>&1 && echo This bridge will now also start by itself whenever this PC starts.
+set "TCDIR=%LOCALAPPDATA%\TeleCafe"
+set "TCSU=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
+if /I "%~dp0"=="%TCDIR%\" goto run
+if not exist "%TCDIR%" mkdir "%TCDIR%"
+copy /Y "%~f0" "%TCDIR%\tele-print-bridge.cmd" >nul 2>&1
+del "%TCSU%\tele-print-bridge.cmd" >nul 2>&1
+>"%TCSU%\tele-print-bridge.vbs" echo CreateObject("WScript.Shell").Run """%TCDIR%\tele-print-bridge.cmd"" hidden", 0, False
+powershell -NoProfile -Command "Unblock-File -LiteralPath '%TCDIR%\tele-print-bridge.cmd','%TCSU%\tele-print-bridge.vbs'" >nul 2>&1
+echo This bridge will now also start by itself, hidden, whenever this PC starts.
+:run
 powershell -NoProfile -ExecutionPolicy Bypass -Command "iex ((Get-Content -LiteralPath '%~f0') -join [Environment]::NewLine)"
+if errorlevel 3 if not errorlevel 4 goto :eof
+if /I "%~1"=="hidden" timeout /t 10 /nobreak >nul & goto run
 pause
 goto :eof
 #>
 $Api = '__API__'
 $H = @{ Authorization = 'Bearer __TOKEN__'; Accept = 'application/json' }
 $TeleMutex = New-Object System.Threading.Mutex($false, 'Local\TeleCafePrintBridge')
-if (-not $TeleMutex.WaitOne(0)) { Write-Host 'The print bridge is already running in another window. You can close this one.' -ForegroundColor Yellow; Start-Sleep -Seconds 8; exit }
+if (-not $TeleMutex.WaitOne(0)) { Write-Host 'The print bridge is already running in another window. You can close this one.' -ForegroundColor Yellow; Start-Sleep -Seconds 8; exit 3 }
+Add-Type -TypeDefinition @'
+using System; using System.Runtime.InteropServices;
+public static class TeleConsole {
+    [DllImport("kernel32.dll")] static extern IntPtr GetStdHandle(int n);
+    [DllImport("kernel32.dll")] static extern bool GetConsoleMode(IntPtr h, out uint m);
+    [DllImport("kernel32.dll")] static extern bool SetConsoleMode(IntPtr h, uint m);
+    [DllImport("kernel32.dll")] static extern uint SetThreadExecutionState(uint f);
+    public static void NoQuickEdit() { IntPtr h = GetStdHandle(-10); uint m; if (GetConsoleMode(h, out m)) SetConsoleMode(h, (m & ~0x40u) | 0x80u); }
+    public static void StayAwake() { SetThreadExecutionState(0x80000001u); }
+}
+'@
+try { [TeleConsole]::NoQuickEdit() } catch {}
+try { [TeleConsole]::StayAwake() } catch {}
 Add-Type -TypeDefinition @'
 using System; using System.Runtime.InteropServices;
 public class TeleRawPrint {
@@ -73,5 +96,6 @@ while ($true) {
         Write-Host "$(Get-Date -Format HH:mm:ss)  cannot reach the POS: $($_.Exception.Message)" -ForegroundColor Red
         Start-Sleep -Seconds 5
     }
+    try { [TeleConsole]::StayAwake() } catch {}
     Start-Sleep -Seconds 2
 }

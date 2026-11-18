@@ -3,6 +3,12 @@
 @php $no = fn ($t) => '#' . $t->order_no; @endphp
 
 @section('content')
+@if (session('ok'))
+    <div class="mb-4 rounded-xl bg-emerald-50 ring-1 ring-emerald-200 text-emerald-800 px-4 py-3 text-sm font-semibold">{{ session('ok') }}</div>
+@endif
+@if ($errors->has('move'))
+    <div class="mb-4 rounded-xl bg-red-50 ring-1 ring-red-200 text-red-800 px-4 py-3 text-sm font-semibold">{{ $errors->first('move') }}</div>
+@endif
 <div class="flex flex-wrap items-center gap-2 mb-4 -mt-2">
     <form method="GET" action="{{ route('manage.mpesa') }}" class="flex flex-wrap gap-2 w-full">
         <input type="search" name="q" value="{{ $q }}" placeholder="Search code, name or phone" class="border rounded-lg px-3 py-2 text-sm flex-1 min-w-[12rem]">
@@ -66,6 +72,23 @@
                         @else
                             <span class="text-xs font-semibold rounded-full bg-amber-200 text-amber-900 px-2.5 py-1">&#9888; Not linked</span>
                         @endif
+                    @if ($r->code)
+                        @php $parts = $split[$r->code] ?? collect(); @endphp
+                        @if ($parts->count() > 1)
+                            <div class="text-xs text-gray-500 mt-1">Split: {{ $parts->map(fn ($p) => '#' . ($p->ticket?->order_no ?? '?') . ' KSh ' . number_format((float) $p->amount))->join(', ') }}</div>
+                        @endif
+                        <details class="mt-1" @if (old('code') === $r->code) open @endif>
+                            <summary class="text-xs text-gray-500 cursor-pointer hover:text-emerald-700">{{ $parts->isEmpty() ? 'Put on bills' : 'Move / split across bills' }}&hellip;</summary>
+                            <form method="POST" action="{{ route('manage.mpesa.split', $r->code) }}" class="mt-2 flex flex-col gap-1.5 w-60">
+                                @csrf
+                                <input type="hidden" name="code" value="{{ $r->code }}">
+                                <input name="bills" required value="{{ old('code') === $r->code ? old('bills') : '' }}" placeholder="Bill numbers, e.g. 48, 49, 50" class="border rounded-lg px-2 py-1 text-sm">
+                                <input name="reason" required maxlength="150" value="{{ old('code') === $r->code ? old('reason') : '' }}" placeholder="Why? e.g. one payment for 3 bills" class="border rounded-lg px-2 py-1 text-sm">
+                                <p class="text-[11px] leading-snug text-gray-500">Each bill gets what it owes, in the order typed; anything left goes on the last bill. The bills it is on now are taken off and reopened if no longer paid.</p>
+                                <button class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-1 text-xs font-semibold">Save</button>
+                            </form>
+                        </details>
+                    @endif
                     </td>
                 </tr>
             @endforeach

@@ -37,6 +37,7 @@ class MpesaLogController extends Controller
 
         $refs = $events->pluck('reference')->filter()->unique()->values();
         $payments = Payment::with('ticket.opener')->whereIn('kk_reference', $refs)->get()->keyBy('kk_reference');
+        $split = Payment::with('ticket')->whereIn('kk_reference', $refs)->get()->groupBy('kk_reference');
 
         $rows = $events->map(function ($e) use ($payments) {
             $p = $e->reference ? $payments->get($e->reference) : null;
@@ -69,6 +70,7 @@ class MpesaLogController extends Controller
         }
 
         return view('manage.mpesa', [
+            'split' => $split,
             'rows'  => $rows,
             'date'  => $date,
             'q'     => $q,

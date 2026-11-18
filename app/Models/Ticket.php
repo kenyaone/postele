@@ -24,7 +24,7 @@ class Ticket extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(TicketItem::class);
+        return $this->hasMany(TicketItem::class)->whereNull('void_at'); // cancelled dishes are not on the bill
     }
 
     public function payments(): HasMany
@@ -45,13 +45,17 @@ class Ticket extends Model
     public function payLabel(): array
     {
         if ($this->status === 'open') return ['Taking order', 'bg-sky-100 text-sky-800', 'Still adding items, not sent to the kitchen'];
-        if ($this->status === 'sent') return ['NOT PAID', 'bg-red-100 text-red-800', 'Food sent to the kitchen, customer has not paid'];
+        if ($this->status === 'sent') {
+            if ($this->payments->isNotEmpty()) return ['PART PAID', 'bg-amber-100 text-amber-800', 'KSh ' . number_format($this->balance) . ' still to pay (KSh ' . number_format($this->paid) . ' paid so far)'];
+            return ['NOT PAID', 'bg-red-100 text-red-800', 'Food sent to the kitchen, customer has not paid'];
+        }
         if ($this->status === 'void') return ['Cancelled', 'bg-gray-200 text-gray-700', 'Cancelled, nothing to pay'];
         $m = $this->payments->pluck('method');
         if ($m->contains('credit')) return ['OWES', 'bg-orange-100 text-orange-800', 'Not paid: put on a customer account, to pay later'];
         if ($m->contains('kk_till_manual')) return ['NOT CONFIRMED', 'bg-red-100 text-red-800', 'M-Pesa code not received by Kopo Kopo'];
         if ($m->isNotEmpty() && $m->every(fn ($x) => $x === 'cash')) return ['PAID · Cash', 'bg-emerald-100 text-emerald-800', 'Paid in cash'];
         if ($m->isNotEmpty() && $m->every(fn ($x) => str_starts_with((string) $x, 'kk'))) return ['PAID · M-Pesa', 'bg-emerald-100 text-emerald-800', 'Paid by M-Pesa, confirmed by Kopo Kopo'];
+        if ($m->contains('cash') && $m->contains(fn ($x) => str_starts_with((string) $x, 'kk'))) return ["PAID \u{00B7} Cash + M-Pesa", 'bg-emerald-100 text-emerald-800', 'Split payment: part cash, part M-Pesa'];
         return ['PAID', 'bg-emerald-100 text-emerald-800', 'Paid'];
     }
 
@@ -70,6 +74,18 @@ class Ticket extends Model
     public function isOnCredit(): bool
     {
         return $this->status === 'paid' && $this->payments->contains('method', 'credit');
+    }
+
+    /** Paid so far: every payment recorded on this bill, part payments included. */
+    public function getPaidAttribute(): float
+    {
+        return round((float) $this->payments->sum('amount'), 2);
+    }
+
+    /** Still to pay: the total minus what has been paid so far (never below zero). */
+    public function getBalanceAttribute(): float
+    {
+        return max(0.0, round($this->total - $this->paid, 2));
     }
 
     public function getTotalAttribute(): float

@@ -34,6 +34,22 @@ class DashboardController extends Controller
         $purMonth = (float) \App\Models\Purchase::where('purchased_on', '>=', $monthStart->toDateString())->sum('total');
         $payMonth = (float) \App\Models\StaffPayment::where('paid_on', '>=', $monthStart->toDateString())->sum('amount');
 
+        // Revenue: value of every bill sent out (paid, on account or still unpaid). Cancelled bills and dishes are left out.
+        $billValue = function ($from) {
+            $r = \Illuminate\Support\Facades\DB::table('tickets')
+                ->join('ticket_items', 'ticket_items.ticket_id', '=', 'tickets.id')
+                ->whereNull('ticket_items.void_at')
+                ->whereIn('tickets.status', ['sent', 'paid'])
+                ->where('tickets.opened_at', '>=', $from)
+                ->selectRaw("COALESCE(SUM(CASE WHEN tickets.status = 'paid' THEN ticket_items.qty * ticket_items.unit_price END), 0) AS paid")
+                ->selectRaw("COALESCE(SUM(CASE WHEN tickets.status = 'sent' THEN ticket_items.qty * ticket_items.unit_price END), 0) AS unpaid")
+                ->selectRaw("COUNT(DISTINCT CASE WHEN tickets.status = 'sent' THEN tickets.id END) AS unpaid_bills")
+                ->first();
+            return (object) ['paid' => (float) $r->paid, 'unpaid' => (float) $r->unpaid, 'unpaidBills' => (int) $r->unpaid_bills, 'total' => (float) $r->paid + (float) $r->unpaid];
+        };
+        $revToday = $billValue($today);
+        $revMonth = $billValue($monthStart);
+
         // Last 7 days, oldest first
         $since = now()->subDays(6)->startOfDay();
         $salesByDay = Payment::where('received_at', '>=', $since)->where('method', '!=', 'credit')
@@ -64,6 +80,8 @@ class DashboardController extends Controller
 
         return view('manage.index', [
             'salesToday'   => $salesToday,
+            'revToday'     => $revToday,
+            'revMonth'     => $revMonth,
             'byMethod'     => $byMethod,
             'ticketsToday' => $ticketsToday,
             'creditToday'  => $creditToday,

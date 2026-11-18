@@ -66,7 +66,7 @@
     <section class="slip">
         @if (config('pos.logo'))<div class="c"><img src="{{ config('pos.logo') }}" alt="" style="max-width:40mm;max-height:22mm;filter:grayscale(1)"></div>@endif
         <div class="c b big">{{ config('pos.cafe_name') }}</div>@if (config('pos.address'))<div class="c">{{ config('pos.address') }}</div>@endif
-        <div class="c">Till {{ config('pos.till_number') }}@if (config('pos.phone')) &middot; {{ config('pos.phone') }}@endif</div>
+        @if (config('pos.phone'))<div class="c">Tel {{ config('pos.phone') }}</div>@endif
         <hr>
         <div class="c b">{!! $mode === 'receipt' ? 'RECEIPT' : 'BILL &mdash; PLEASE PAY' !!}</div>
         <hr>
@@ -81,16 +81,20 @@
         </table>
         <hr>
         <table><tr class="b big"><td>TOTAL</td><td class="r">KSh {{ number_format($ticket->total, 2) }}</td></tr></table>
+        @if ($mode !== 'receipt' && $ticket->payments->isNotEmpty())<table><tr><td>Paid so far</td><td class="r">{{ number_format($ticket->paid, 2) }}</td></tr><tr class="b big"><td>LEFT TO PAY</td><td class="r">KSh {{ number_format($ticket->balance, 2) }}</td></tr></table>@endif
         <hr>
         @if ($mode === 'receipt' && $payment)
+            @if ($ticket->payments->count() > 1)
+            @foreach ($ticket->payments as $p)<div>Paid: {{ $methods[$p->method] ?? $p->method }} KSh {{ number_format((float) $p->amount, 2) }}@if ($p->kk_reference) ({{ $p->kk_reference }})@endif</div>@endforeach
+            @else
             <div>Paid: {{ $methods[$payment->method] ?? $payment->method }}@if ($payment->kk_reference) ({{ $payment->kk_reference }})@endif</div>
+            @endif
             <div>{{ $payment->received_at?->format('d M Y H:i') }}</div>
             <hr>
             <div class="c">Thank you! Order again:</div>
             <div class="c">{{ config('pos.thank_you_wa') }}</div>
         @else
-            <div class="c">Pay at the counter.</div>
-            <div class="c b">M-Pesa Till {{ config('pos.till_number') }}</div>
+            <div class="c">No smartphone? Ask the waiter to send an M-Pesa prompt.</div>
             <div class="c" style="margin-top:6px">Scan to pay with M-Pesa:</div><div id="payqr" style="display:flex;justify-content:center;margin:4px 0"></div>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
             <script>new QRCode(document.getElementById('payqr'), { text: @json(\App\Http\Controllers\PayController::link($ticket)), width: 128, height: 128, correctLevel: QRCode.CorrectLevel.M });</script>
