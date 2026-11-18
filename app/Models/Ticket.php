@@ -10,7 +10,7 @@ class Ticket extends Model
 {
     use \App\Models\Concerns\HasOrderNumber;
 
-    protected $fillable = ['opened_by', 'status', 'opened_at', 'closed_at', 'notes', 'void_reason', 'voided_by', 'void_approved_by', 'channel'];
+    protected $fillable = ['opened_by', 'backdated_by', 'status', 'opened_at', 'closed_at', 'notes', 'void_reason', 'voided_by', 'void_approved_by', 'channel'];
 
     protected $casts = [
         'opened_at' => 'datetime',

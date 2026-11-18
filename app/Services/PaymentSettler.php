@@ -34,7 +34,7 @@ class PaymentSettler
 
             $payment = Payment::create([
                 'ticket_id' => $t->id, 'method' => $method, 'amount' => $amount, 'kk_reference' => $reference,
-                'received_at' => now(), 'matched_at' => now(), 'matched_by' => $userId,
+                'received_at' => $t->backdated_by ? $t->opened_at : now(), 'matched_at' => now(), 'matched_by' => $userId,
             ]);
 
             // Part payment: the bill stays open until the rest is paid.
@@ -42,8 +42,8 @@ class PaymentSettler
                 return $payment;
             }
 
-            $t->update(['status' => 'paid', 'closed_at' => now()]);
-            app(\App\Services\PrintRouter::class)->cashier(app(Receipts::class)->buildReceipt($t->fresh(['items.item', 'opener', 'payments']), $payment), true, $t->id);
+            $t->update(['status' => 'paid', 'closed_at' => $t->backdated_by ? $t->opened_at : now()]);
+            if (! $t->backdated_by) app(\App\Services\PrintRouter::class)->cashier(app(Receipts::class)->buildReceipt($t->fresh(['items.item', 'opener', 'payments']), $payment), true, $t->id);
             return $payment;
         });
     }
@@ -97,10 +97,10 @@ class PaymentSettler
                 if ($i === $list->count() - 1) $amount = round($amount + ($paid - $sum), 2);
                 $payments[] = $payment = Payment::create([
                     'ticket_id' => $t->id, 'method' => $method, 'amount' => $amount, 'kk_reference' => $reference,
-                    'received_at' => now(), 'matched_at' => now(), 'matched_by' => $userId,
+                    'received_at' => $t->backdated_by ? $t->opened_at : now(), 'matched_at' => now(), 'matched_by' => $userId,
                 ]);
-                $t->update(['status' => 'paid', 'closed_at' => now()]);
-                app(\App\Services\PrintRouter::class)->cashier(app(Receipts::class)->buildReceipt($t->fresh(['items.item', 'opener', 'payments']), $payment), true, $t->id);
+                $t->update(['status' => 'paid', 'closed_at' => $t->backdated_by ? $t->opened_at : now()]);
+                if (! $t->backdated_by) app(\App\Services\PrintRouter::class)->cashier(app(Receipts::class)->buildReceipt($t->fresh(['items.item', 'opener', 'payments']), $payment), true, $t->id);
             }
             return $payments;
         });

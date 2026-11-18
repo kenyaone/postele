@@ -121,6 +121,13 @@ class PosController extends Controller
             return back()->withErrors(['send' => 'Ticket is empty.']);
         }
 
+        // Back-dated order (entered later by a manager): no kitchen ticket, and the dishes count on the day it happened.
+        if ($ticket->backdated_by) {
+            TicketItem::where('ticket_id', $ticket->id)->whereNull('sent_at')->update(['sent_at' => $ticket->opened_at]);
+            $ticket->update(['status' => 'sent']);
+            return redirect()->route('pos.tickets.show', $ticket)->with('ok', 'Back-dated order #' . $ticket->order_no . ' saved. Nothing was printed. Now record how it was paid.');
+        }
+
         DB::transaction(function () use ($ticket, $receipts) {
             $newLineIds = TicketItem::where('ticket_id', $ticket->id)->whereNull('sent_at')->pluck('id');
             TicketItem::where('ticket_id', $ticket->id)
