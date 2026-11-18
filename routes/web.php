@@ -33,12 +33,16 @@ Route::post('/login',  [PinLoginController::class, 'store'])->middleware('thrott
 Route::post('/logout', [PinLoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
 Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name('pos.')->group(function () {
+    Route::get('/collect', [\App\Http\Controllers\Pos\CollectController::class, 'index'])->name('collect');
     Route::get('/bills', [\App\Http\Controllers\Pos\BillsController::class, 'index'])->name('bills');
+    Route::get('/clear', [\App\Http\Controllers\Pos\ClearController::class, 'index'])->name('clear');
+    Route::post('/clear', [\App\Http\Controllers\Pos\ClearController::class, 'store'])->middleware('throttle:30,1')->name('clear.store');
     Route::post('/channel', [PosController::class, 'setChannel'])->name('channel');
     Route::post('/tickets/{ticket}/credit', [\App\Http\Controllers\Pos\CreditController::class, 'store'])->name('tickets.credit');
     Route::get('/find', [\App\Http\Controllers\Pos\PosController::class, 'find'])->name('find');
     Route::get('/my-pin', [\App\Http\Controllers\Pos\MyPinController::class, 'edit'])->name('pin');
     Route::post('/my-pin', [\App\Http\Controllers\Pos\MyPinController::class, 'update'])->middleware('throttle:6,1')->name('pin.update');
+    Route::get('/my-pay', [\App\Http\Controllers\Pos\MyPayController::class, 'show'])->name('mypay');
     Route::get('/tickets/{ticket}/print-status', [\App\Http\Controllers\Pos\PosController::class, 'printStatus'])->name('tickets.printstatus');
     Route::post('/tickets/{ticket}/reprint', [\App\Http\Controllers\Pos\PosController::class, 'reprint'])->middleware('throttle:20,1')->name('tickets.reprint');
     Route::get('/history', [\App\Http\Controllers\Pos\HistoryController::class, 'index'])->name('history');
@@ -52,6 +56,8 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
     Route::patch('/tickets/{ticket}/items/{ticketItem}', [PosController::class, 'updateLine'])->name('tickets.items.update');
     Route::post('/tickets/{ticket}/send',                [PosController::class, 'sendToKitchen'])->name('tickets.send');
     Route::post('/tickets/{ticket}/reopen',  [PosController::class, 'reopen'])->name('tickets.reopen');
+    Route::get('/tickets/{ticket}/split', [PosController::class, 'splitForm'])->name('tickets.split');
+    Route::post('/tickets/{ticket}/split', [PosController::class, 'split'])->middleware('throttle:20,1')->name('tickets.split.store');
     Route::get('/tickets/{ticket}/bill',                 [PosController::class, 'printBill'])->name('tickets.bill');
     Route::post('/tickets/{ticket}/close',               [PosController::class, 'closeBill'])->name('tickets.close');
     Route::post('/tickets/{ticket}/void',                [PosController::class, 'voidTicket'])->middleware('throttle:10,1')->name('tickets.void');
@@ -69,6 +75,8 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
 
 Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->group(function () {
     Route::get('/mpesa', [\App\Http\Controllers\Manage\MpesaLogController::class, 'index'])->name('mpesa');
+    Route::post('/mpesa/payments/{payment}/move', [\App\Http\Controllers\Manage\PaymentMoveController::class, 'move'])->name('mpesa.move');
+    Route::post('/mpesa/codes/{code}/split', [\App\Http\Controllers\Manage\PaymentMoveController::class, 'split'])->name('mpesa.split');
     Route::get('/old-bills', [\App\Http\Controllers\Manage\LegacyBillsController::class, 'index'])->name('legacy');
     Route::post('/old-bills/{bill}', [\App\Http\Controllers\Manage\LegacyBillsController::class, 'clear'])->name('legacy.clear');
     Route::get('/credit-fix', [\App\Http\Controllers\Manage\CreditFixController::class, 'index'])->name('credit-fix');
@@ -88,6 +96,7 @@ Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->
     Route::get('/settings',   [SettingsController::class, 'edit'])->name('settings');
     Route::patch('/settings', [SettingsController::class, 'update'])->name('settings.update');
     Route::patch('/settings/password', [SettingsController::class, 'updatePassword'])->name('password.update');
+        Route::patch('/settings/pay', [\App\Http\Controllers\Manage\WaiterPayController::class, 'update'])->name('settings.pay');
 
     Route::get('/expenses',                 [ExpenseController::class, 'index'])->name('expenses.index');
     Route::post('/expenses',                [ExpenseController::class, 'store'])->name('expenses.store');

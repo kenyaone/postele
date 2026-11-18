@@ -34,6 +34,7 @@
         ['Dashboard',        'manage.index',          '&#128200;', 'manage.index',        ['manager']],
         ['Point of Sale',    'pos.index',             '&#128722;', 'pos.*',               ['manager', 'cashier', 'waiter']],
         ['Bills', 'pos.bills', '&#129534;', 'pos.bills*', ['manager', 'cashier', 'waiter']],
+        ['Clear my bills', 'pos.clear', '&#9989;', 'pos.clear*', ['manager', 'cashier', 'waiter']],
         ['Order history', 'pos.history', '&#128338;', 'pos.history*', ['manager', 'cashier', 'waiter']],
         ['Change my PIN', 'pos.pin', '&#128273;', 'pos.pin*', ['cashier', 'waiter']],
         ['Debts', 'pos.debts', '&#128221;', 'pos.debts*', ['manager', 'cashier', 'waiter']],
