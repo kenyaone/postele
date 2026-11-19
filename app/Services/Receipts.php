@@ -48,7 +48,6 @@ class Receipts
     private function buildInvoice(Ticket $ticket, ?Payment $payment): string
     {
         $cafe  = config('pos.cafe_name');
-        $till  = config('pos.till_number');
         $phone = config('pos.phone');
         $wa    = config('pos.thank_you_wa');
         $isBill = $payment === null;
@@ -94,8 +93,7 @@ class Receipts
         $label = fn ($p) => match ($p->method) {
             'cash' => 'Cash',
             'credit' => 'On account',
-            'kk_stk' => 'M-Pesa STK',
-            'kk_till_auto', 'kk_till_manual' => 'M-Pesa Till',
+            'kk_stk', 'kk_till_auto', 'kk_till_manual' => 'M-Pesa',
             default => $p->method,
         };
         $paidRows = $ticket->payments()->orderBy('id')->get();

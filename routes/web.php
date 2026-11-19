@@ -37,6 +37,7 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
     Route::get('/bills', [\App\Http\Controllers\Pos\BillsController::class, 'index'])->name('bills');
     Route::get('/clear', [\App\Http\Controllers\Pos\ClearController::class, 'index'])->name('clear');
     Route::post('/clear', [\App\Http\Controllers\Pos\ClearController::class, 'store'])->middleware('throttle:30,1')->name('clear.store');
+    Route::post('/clear/code', [\App\Http\Controllers\Pos\ClearController::class, 'code'])->middleware('throttle:20,1')->name('clear.code');
     Route::get('/backdate', [\App\Http\Controllers\Pos\BackdateController::class, 'create'])->middleware('role:manager')->name('backdate');
     Route::post('/backdate', [\App\Http\Controllers\Pos\BackdateController::class, 'store'])->middleware('role:manager')->name('backdate.store');
     Route::post('/channel', [PosController::class, 'setChannel'])->name('channel');

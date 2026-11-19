@@ -55,6 +55,7 @@
 @if ($payToday)
 <a href="{{ route('pos.mypay') }}" class="block bg-emerald-900 hover:bg-emerald-800 text-emerald-50 text-sm px-4 py-1.5 text-center">Today: <b>KSh {{ number_format($payToday['collected']) }}</b> collected &middot; {{ $payToday['next'] }} <span class="underline font-semibold whitespace-nowrap">My pay &rsaquo;</span></a>
 @endif
+@if ($me && $me->role !== 'manager')<div class="px-3 pt-3">@include('pos.partials.pending-notice')</div>@endif
 
 @if (session('ok') || session('change') !== null || $errors->any())
     <div class="px-4 pt-3 space-y-2">
@@ -160,7 +161,7 @@
                     @if ($ticket->payments->isNotEmpty())
                     <div class="mb-3 rounded-2xl bg-amber-50 ring-1 ring-amber-200 p-3 text-sm">
                     <div class="font-bold text-amber-900 mb-1">Part paid</div>
-                    @foreach ($ticket->payments as $p)<div class="flex justify-between gap-2"><span>{{ ['cash' => 'Cash', 'credit' => 'On account', 'kk_stk' => 'M-Pesa', 'kk_till_auto' => 'M-Pesa Till', 'kk_till_manual' => 'M-Pesa Till'][$p->method] ?? $p->method }}@if ($p->kk_reference) <span class="font-mono text-xs">{{ $p->kk_reference }}</span>@endif</span><span class="font-semibold">KSh {{ number_format((float) $p->amount) }}</span></div>@endforeach
+                    @foreach ($ticket->payments as $p)<div class="flex justify-between gap-2"><span>{{ ['cash' => 'Cash', 'credit' => 'On account', 'kk_stk' => 'M-Pesa', 'kk_till_auto' => 'M-Pesa', 'kk_till_manual' => 'M-Pesa'][$p->method] ?? $p->method }}@if ($p->kk_reference) <span class="font-mono text-xs">{{ $p->kk_reference }}</span>@endif</span><span class="font-semibold">KSh {{ number_format((float) $p->amount) }}</span></div>@endforeach
                     <div class="flex justify-between border-t border-amber-200 mt-1 pt-1 font-extrabold text-amber-900"><span>Left to pay</span><span>KSh {{ number_format($ticket->balance) }}</span></div>
                     </div>
                     @endif
@@ -231,7 +232,7 @@
                             <div class="mt-1 text-sm">{{ $pay->method === 'credit' ? 'On account: ' . optional(optional($ticket->creditSale)->customer)->name : 'Paid in cash' }}</div>
                         @endif
                     </div>
-                    @if ($ticket->payments->count() > 1)<div class="mb-3 rounded-xl bg-emerald-50 ring-1 ring-emerald-200 p-3 text-sm">@foreach ($ticket->payments as $p)<div class="flex justify-between gap-2"><span>{{ ['cash' => 'Cash', 'credit' => 'On account', 'kk_stk' => 'M-Pesa', 'kk_till_auto' => 'M-Pesa Till', 'kk_till_manual' => 'M-Pesa Till'][$p->method] ?? $p->method }}@if ($p->kk_reference) <span class="font-mono text-xs">{{ $p->kk_reference }}</span>@endif</span><span class="font-semibold">KSh {{ number_format((float) $p->amount) }}</span></div>@endforeach</div>@endif
+                    @if ($ticket->payments->count() > 1)<div class="mb-3 rounded-xl bg-emerald-50 ring-1 ring-emerald-200 p-3 text-sm">@foreach ($ticket->payments as $p)<div class="flex justify-between gap-2"><span>{{ ['cash' => 'Cash', 'credit' => 'On account', 'kk_stk' => 'M-Pesa', 'kk_till_auto' => 'M-Pesa', 'kk_till_manual' => 'M-Pesa'][$p->method] ?? $p->method }}@if ($p->kk_reference) <span class="font-mono text-xs">{{ $p->kk_reference }}</span>@endif</span><span class="font-semibold">KSh {{ number_format((float) $p->amount) }}</span></div>@endforeach</div>@endif
                     <button type="button" onclick="printBill('{{ route('pos.tickets.bill', [$ticket, 'mode' => 'receipt']) }}')" class="w-full rounded-xl py-2.5 text-sm font-semibold bg-crema hover:bg-amber-50 ring-1 ring-roast/15 mb-2">&#129534; Print receipt</button>
                     <form method="POST" action="{{ route('pos.tickets.store') }}">@csrf<button class="w-full rounded-2xl bg-saffron hover:bg-amber-400 text-espresso font-extrabold text-lg py-4 shadow-md">+ New order</button></form>
                 @endif

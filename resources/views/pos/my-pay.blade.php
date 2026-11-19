@@ -14,6 +14,7 @@
         @if (auth()->user()->role === 'manager')<a href="{{ route('manage.reports.staff') }}" class="font-semibold underline">Waiters report</a>@else Waiters report @endif.
     </div>
 @else
+    @include('pos.partials.pending-notice')
     <div class="bg-emerald-900 text-emerald-50 rounded-2xl shadow p-5">
         <div class="text-xs font-bold uppercase tracking-wider text-emerald-200">Today &middot; {{ now()->format('D j M') }}</div>
         <div class="mt-1 text-3xl font-extrabold">{{ $ksh($today['collected']) }} <span class="text-base font-semibold text-emerald-200">collected</span></div>

@@ -71,9 +71,16 @@ class MpesaController extends Controller
         }
         StkRequest::where('ticket_id', $ticket->id)->where('phone', 'kk-app')->where('status', 'pending')->update(['status' => 'failed', 'error' => 'Replaced']);
 
-        $event = KkEvent::where('event_type', 'buygoods_transaction_received')->where('status', 'pending')
+        // A payment of this amount may already have come in. Take it only if it is the ONLY unlinked one with
+        // this amount in the last 20 minutes; with two or more we cannot tell whose it is.
+        $found = KkEvent::where('event_type', 'buygoods_transaction_received')->where('status', 'pending')
             ->where('created_at', '>=', now()->subMinutes(20))->orderBy('id')->get()
-            ->first(fn ($e) => abs((float) $e->amount - (float) $ticket->balance) < 0.01 && ! Payment::where('kk_reference', $e->reference)->exists());
+            ->filter(fn ($e) => abs((float) $e->amount - (float) $ticket->balance) < 0.01 && ! Payment::where('kk_reference', $e->reference)->exists());
+        if ($found->count() > 1) {
+            return redirect()->route('pos.clear')->withErrors(['clear' => $found->count() . ' payments of KSh ' . number_format($ticket->balance)
+                . ' came in during the last 20 minutes. Pick the one from your customer (check the phone number) and tick bill #' . $ticket->order_no . '.']);
+        }
+        $event = $found->first();
         if ($event) {
             try {
                 $settler->settle($ticket, 'kk_till_auto', (float) $event->amount, $event->reference, $request->user()->id);
@@ -131,7 +138,7 @@ class MpesaController extends Controller
         // A typed code is only accepted once Kopo Kopo has actually received that payment.
         $event = KkEvent::where('event_type', 'buygoods_transaction_received')->where('reference', $code)->latest('id')->first();
         if (! $event) {
-            return back()->withInput()->withErrors(['mpesa' => "Kopo Kopo has not received M-Pesa {$code} on Till " . config('pos.till_number') . ' yet. Check the code on the customer\'s SMS, wait a minute and try again. The bill stays unpaid until the money arrives.']);
+            return back()->withInput()->withErrors(['mpesa' => "Kopo Kopo has not received M-Pesa {$code} yet. Check the code on the customer's SMS, wait a minute and try again. The bill stays unpaid until the money arrives."]);
         }
         if ($event->status !== 'pending') {
             return back()->withInput()->withErrors(['mpesa' => "M-Pesa {$code} has already been used for another bill."]);

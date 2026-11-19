@@ -91,7 +91,7 @@
 
     <div class="rounded-2xl bg-white ring-1 ring-roast/10 p-3">
         <div class="flex items-center justify-between mb-2">
-            <div class="text-xs font-bold uppercase tracking-wider text-roast/60"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-green-600 text-white mr-1">2</span> Paid Till {{ config('pos.till_number') }}? Tap it</div>
+            <div class="text-xs font-bold uppercase tracking-wider text-roast/60"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-green-600 text-white mr-1">2</span> Customer already paid? Tap the payment</div>
             <a href="{{ url()->current() }}" class="text-xs font-semibold text-green-700 hover:underline">&#8635; Refresh</a>
         </div>
         <label class="flex items-center gap-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 px-3 py-2 mb-2 text-sm font-semibold cursor-pointer"><input type="checkbox" id="mp-part" class="w-5 h-5 accent-amber-600"> Customer is paying only part by M-Pesa (the rest by cash)</label>
@@ -130,7 +130,7 @@
             @csrf
             <input name="code" required maxlength="12" value="{{ old('code') }}" placeholder="e.g. QK12ABC3XY" class="rounded-xl ring-1 ring-roast/20 px-3 py-2.5 uppercase font-mono">
             <button class="rounded-xl ring-2 ring-green-700 text-green-800 font-semibold py-2.5 hover:bg-green-50">Check with Kopo Kopo</button>
-            <p class="text-xs text-roast/60">The bill is only marked paid once Kopo Kopo has received this payment on Till {{ config('pos.till_number') }}.</p>
+            <p class="text-xs text-roast/60">The bill is only marked paid once Kopo Kopo has received this payment.</p>
         </form>
     </details>
 </div>

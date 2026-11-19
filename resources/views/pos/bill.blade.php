@@ -1,7 +1,7 @@
 @php
     // $mode: kot (kitchen only) | both (kitchen + bill) | bill | receipt
     $no = $ticket->order_no;
-    $methods = ['cash' => 'Cash', 'credit' => 'On account', 'kk_stk' => 'M-Pesa', 'kk_till_auto' => 'M-Pesa Till', 'kk_till_manual' => 'M-Pesa Till'];
+    $methods = ['cash' => 'Cash', 'credit' => 'On account', 'kk_stk' => 'M-Pesa', 'kk_till_auto' => 'M-Pesa', 'kk_till_manual' => 'M-Pesa'];
     $title = ['kot' => 'Kitchen', 'both' => 'Kitchen + bill', 'bill' => 'Bill', 'receipt' => 'Receipt', 'cancel' => 'Cancelled'][$mode] ?? 'Bill';
 @endphp
 <!DOCTYPE html>
