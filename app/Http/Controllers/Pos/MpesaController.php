@@ -103,6 +103,9 @@ class MpesaController extends Controller
     public function match(Request $request, Ticket $ticket, PaymentSettler $settler)
     {
         $this->authorizeTicket($request, $ticket);
+        if ($request->user()->role !== 'manager') {
+            return back()->withErrors(['mpesa' => 'Type the M-Pesa code from the customer\'s SMS instead.']);
+        }
         $data  = $request->validate(['event_id' => 'required|integer']);
         $event = KkEvent::where('id', $data['event_id'])->where('event_type', 'buygoods_transaction_received')->where('status', 'pending')->first();
         if (! $event) return back()->withErrors(['mpesa' => 'That M-Pesa payment is no longer available. It may already be matched.']);
@@ -162,8 +165,8 @@ class MpesaController extends Controller
     private function billsFor(Request $request, Ticket $ticket)
     {
         $ids = collect((array) $request->input('also', []))->map(fn ($v) => (int) $v)->filter()->reject(fn ($id) => $id === $ticket->id)->unique()->take(20);
-        $others = Ticket::with(['items', 'payments'])->whereIn('id', $ids)->whereIn('status', ['open', 'sent'])->get()
-            ->filter(fn ($t) => $request->user()->role === 'manager' || $t->opened_by === $request->user()->id);
+        // Colleagues' bills may be ticked too (one customer paying for two waiters' tables).
+        $others = Ticket::with(['items', 'payments'])->whereIn('id', $ids)->whereIn('status', ['open', 'sent'])->get();
         return collect([$ticket->load(['items', 'payments'])])->merge($others)->values();
     }
 

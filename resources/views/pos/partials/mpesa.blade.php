@@ -8,8 +8,9 @@
     $billKsh = (int) ceil($ticket->balance);
     $otherBills = \App\Models\Ticket::with('items', 'opener', 'payments')->whereIn('status', ['open', 'sent'])->where('id', '!=', $ticket->id)
         ->where('created_at', '>=', now()->subHours(12))
-        ->when(auth()->user()->role !== 'manager', fn ($q) => $q->where('opened_by', auth()->id()))
-        ->orderByDesc('id')->limit(15)->get()->filter(fn ($t) => $t->balance > 0);
+        ->orderByDesc('id')->limit(30)->get()->filter(fn ($t) => $t->balance > 0)
+        ->sortByDesc(fn ($t) => (int) ($t->opened_by === auth()->id()))->values();   // own bills first, then colleagues'
+    $isMgr = auth()->user()->role === 'manager';
 @endphp
 <div class="space-y-3">
     @if ($stkWait)
@@ -57,13 +58,13 @@
                 @foreach ($otherBills as $ob)
                     <label class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-green-50">
                         <input type="checkbox" class="also-bill w-5 h-5 accent-green-600" value="{{ $ob->id }}" data-total="{{ (float) $ob->balance }}">
-                        <span class="flex-1 min-w-0 truncate"><b>{{ $ob->order_no }}</b> <span class="text-xs text-roast/60">{{ $ob->opener?->name }} &middot; {{ $ob->items->whereNull('void_at')->map(fn ($i) => $i->qty . ' ' . ($i->item->name ?? ''))->take(3)->implode(', ') }}</span></span>
+                        <span class="flex-1 min-w-0 truncate"><b>{{ $ob->order_no }}</b> @if ($ob->opened_by !== auth()->id())<span class="text-[11px] font-bold text-amber-700 bg-amber-100 rounded px-1">{{ $ob->opener?->name }}'s bill</span>@endif <span class="text-xs text-roast/60">{{ $ob->opener?->name }} &middot; {{ $ob->items->whereNull('void_at')->map(fn ($i) => $i->qty . ' ' . ($i->item->name ?? ''))->take(3)->implode(', ') }}</span></span>
                         <span class="font-semibold shrink-0">KSh {{ number_format($ob->balance) }}</span>
                     </label>
                 @endforeach
             </div>
             <div class="mt-2 rounded-lg bg-green-50 px-3 py-2 font-bold text-green-900">Together: KSh <span id="multiTotal">{{ number_format($billKsh) }}</span></div>
-            <p class="text-xs text-roast/60 mt-1">Then send the prompt, tap their till payment, or type their M-Pesa code. All ticked orders are paid with one M-Pesa.</p>
+            <p class="text-xs text-roast/60 mt-1">Bills of other waiters can be ticked too: the note on each bill says who was paid with whom. Then send the prompt or type the M-Pesa code. All ticked orders are paid with one M-Pesa.</p>
         </details>
     @endif
 
@@ -91,11 +92,13 @@
 
     <div class="rounded-2xl bg-white ring-1 ring-roast/10 p-3">
         <div class="flex items-center justify-between mb-2">
-            <div class="text-xs font-bold uppercase tracking-wider text-roast/60"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-green-600 text-white mr-1">2</span> Customer already paid? Tap the payment</div>
+            <div class="text-xs font-bold uppercase tracking-wider text-roast/60"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-green-600 text-white mr-1">2</span> Customer already paid? {{ $isMgr ? 'Tap the payment' : 'Use the M-Pesa code' }}</div>
             <a href="{{ url()->current() }}" class="text-xs font-semibold text-green-700 hover:underline">&#8635; Refresh</a>
         </div>
         <label class="flex items-center gap-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 px-3 py-2 mb-2 text-sm font-semibold cursor-pointer"><input type="checkbox" id="mp-part" class="w-5 h-5 accent-amber-600"> Customer is paying only part by M-Pesa (the rest by cash)</label>
-        @if ($mpesaEvents->isEmpty())
+        @if (! $isMgr)
+            <p class="text-sm text-roast/70 py-2">Type the M-Pesa code from the customer's SMS in the box below. It is checked with Kopo Kopo.</p>
+        @elseif ($mpesaEvents->isEmpty())
             <p class="text-sm text-roast/60 py-2 text-center">No new till payments in the last 3 hours.</p>
         @else
             @foreach ($mpesaEvents as $ev)
@@ -124,7 +127,7 @@
         @endif
     </div>
 
-    <details class="rounded-2xl bg-white ring-1 ring-roast/10 p-3 text-sm" {{ $errors->has('mpesa') || $errors->has('code') ? 'open' : '' }}>
+    <details class="rounded-2xl bg-white ring-1 ring-roast/10 p-3 text-sm" {{ ! $isMgr || $errors->has('mpesa') || $errors->has('code') ? 'open' : '' }}>
         <summary class="cursor-pointer font-semibold text-roast/80"><span class="inline-grid place-items-center w-5 h-5 rounded-full bg-roast/60 text-white text-xs mr-1">3</span> Not showing? Type the M-Pesa code</summary>
         <form method="POST" action="{{ route('pos.tickets.mpesa.manual', $ticket) }}" class="mp-pay grid grid-cols-1 gap-2 mt-3">
             @csrf

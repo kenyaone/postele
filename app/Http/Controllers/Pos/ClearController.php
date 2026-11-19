@@ -94,12 +94,23 @@ class ClearController extends Controller
             'bills' => 'required|array|min:1|max:30',
             'bills.*' => 'integer',
             'reason' => 'nullable|string|max:150',
+            'others' => 'nullable|string|max:120',
         ], [
             'code.required' => 'Type the M-Pesa code from the customer\'s SMS.',
             'code.regex' => 'An M-Pesa code is 10 letters and numbers, e.g. UKILD26AD2.',
             'bills.required' => 'Tick the bill(s) this M-Pesa code paid for.',
         ]);
         $code = strtoupper(trim($data['code']));
+
+        // Colleagues' bills paid with the same M-Pesa (typed by order number, e.g. "149, 038").
+        foreach (preg_split('/[\s,;]+/', (string) ($data['others'] ?? ''), -1, PREG_SPLIT_NO_EMPTY) as $no) {
+            $t = Ticket::findByOrderNo($no)
+                ?? (ctype_digit($no) && strlen($no) <= 3 ? Ticket::whereIn('status', ['open', 'sent'])->where('daily_no', (int) $no)
+                    ->where('opened_at', '>=', now()->subDays(self::DAYS - 1)->startOfDay())->orderByDesc('id')->get()
+                    ->filter(fn ($x) => $x->balance > 0.004)->first() : null);
+            if (! $t) return back()->withErrors(['clear' => "There is no unpaid order {$no}."])->withInput();
+            $data['bills'][] = $t->id;
+        }
 
         if (! \Illuminate\Support\Facades\Cache::add('clear-code:' . $user->id, 1, 3)) {
             return back()->withErrors(['clear' => 'One moment, then try again.'])->withInput();
@@ -134,8 +145,9 @@ class ClearController extends Controller
         $list = Ticket::with(['items', 'payments', 'opener'])->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get();
         if ($list->count() !== $ids->count()) throw new RuntimeException('One of those bills no longer exists.');
         foreach ($list as $t) {
-            if ($user->role !== 'manager' && $t->opened_by !== $user->id) {
-                throw new RuntimeException("Bill {$t->order_no} is not yours.");
+            // A waiter may include a colleague's bill only together with one of their own, by M-Pesa code.
+            if ($user->role !== 'manager' && $t->opened_by !== $user->id && ! ($byCode && $list->contains('opened_by', $user->id))) {
+                throw new RuntimeException("Bill {$t->order_no} is not yours. Tick your own bill too, and add theirs by order number.");
             }
             if ($user->role === 'manager' && ! $byCode && $t->opened_by !== $user->id && mb_strlen(trim($reason)) < 5) {
                 throw new RuntimeException("Bill {$t->order_no} belongs to " . ($t->opener->name ?? 'another waiter')
@@ -168,7 +180,8 @@ class ClearController extends Controller
             ]);
             $fields = [];
             if (! $part) $fields += ['status' => 'paid', 'closed_at' => $when->max($t->opened_at ?? $when)];
-            $note = $byCode ? "M-Pesa {$event->reference} code verified by {$user->name}." : (trim($reason) !== '' ? "M-Pesa {$event->reference} linked by {$user->name}: " . trim($reason) . '.' : '');
+            $with = $list->where('id', '!=', $t->id)->map(fn ($x) => '#' . $x->order_no . ' (' . ($x->opener->name ?? '?') . ')')->implode(', ');
+            $note = $byCode ? "M-Pesa {$event->reference} code verified by {$user->name}" . ($with !== '' ? ", paid together with {$with}" : '') . '.' : (trim($reason) !== '' ? "M-Pesa {$event->reference} linked by {$user->name}: " . trim($reason) . '.' : '');
             if ($note !== '') $fields['notes'] = trim(($t->notes ? $t->notes . ' ' : '') . $note);
             if ($fields) $t->update($fields);
         }

@@ -105,6 +105,9 @@
 <div class="sticky bottom-0 mt-4 bg-white rounded-xl shadow ring-1 ring-gray-200 p-3 flex flex-wrap items-center gap-3">
     <div class="text-sm">Payment <b id="cPay">&mdash;</b> &middot; Ticked bills <b id="cBills">KSh 0</b> <span id="cNote" class="ml-1 font-bold"></span></div>
     <input name="code" id="cCode" value="{{ old('code') }}" maxlength="14" autocomplete="off" autocapitalize="characters" placeholder="M-Pesa code e.g. UKILD26AD2" class="border-2 border-green-600 rounded-lg px-3 py-2 font-mono uppercase text-base w-56">
+    @unless ($isManager)
+        <input name="others" value="{{ old('others') }}" maxlength="120" placeholder="Also another waiter's bill? Order no. e.g. 149" class="border rounded-lg px-3 py-2 text-sm w-64">
+    @endunless
     <button id="cVerify" formaction="{{ route('pos.clear.code', $isManager && $waiterId ? ['waiter' => $waiterId] : []) }}" disabled class="rounded-xl bg-green-700 hover:bg-green-800 text-white font-bold px-6 py-3 disabled:opacity-40 disabled:cursor-not-allowed">Verify code</button>
     @if ($isManager)
         <input name="reason" value="{{ old('reason') }}" maxlength="150" placeholder="How do you know? (needed for other waiters' bills)" class="border rounded-lg px-3 py-2 text-sm flex-1 min-w-[14rem]">
