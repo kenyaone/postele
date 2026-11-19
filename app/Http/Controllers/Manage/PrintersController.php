@@ -108,4 +108,27 @@ class PrintersController extends Controller
             'active' => $request->boolean('active'),
         ];
     }
+
+    /** Slips made while the printer was off: older than the 15 minutes the bridge still prints, from the last 24 hours. */
+    public static function missedQuery()
+    {
+        return PrintJob::whereNotNull('printer_id')->where('status', 'pending')->where('tries', '<', 3)
+            ->where('created_at', '<', now()->subMinutes(15))->where('created_at', '>=', now()->subDay());
+    }
+
+    public function missed()
+    {
+        $jobs = self::missedQuery()->with('target')->orderBy('id')->get(['id', 'printer', 'printer_id', 'ticket_id', 'kind', 'created_at']);
+        $tickets = \App\Models\Ticket::whereIn('id', $jobs->pluck('ticket_id')->filter()->unique())->get()->keyBy('id');
+        return view('manage.printers-missed', compact('jobs', 'tickets'));
+    }
+
+    /** Reprint the ticked slips: they go back in the queue as new, so the bridge prints them now. */
+    public function reprintMissed(Request $request)
+    {
+        $ids = collect((array) $request->input('jobs', []))->map(fn ($v) => (int) $v)->filter();
+        $n = self::missedQuery()->whereIn('id', $ids)->update(['created_at' => now(), 'tries' => 0]);
+        $skipped = self::missedQuery()->update(['status' => 'failed', 'error' => 'Not printed: printer was off; skipped by ' . $request->user()->name]);
+        return redirect()->route('manage.printers')->with('ok', "{$n} slip(s) sent to the printer again" . ($skipped ? ", {$skipped} not needed and skipped." : '.'));
+    }
 }

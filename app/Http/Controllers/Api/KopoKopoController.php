@@ -103,4 +103,13 @@ class KopoKopoController extends Controller
         }
         return response()->json(['ok' => true]);
     }
+
+    /** Kopo Kopo posts the polling result here too; the pos:kk-poll command reads the result itself, so this only acknowledges. */
+    public function pollCallback(Request $request)
+    {
+        if (! KopoKopo::verify($request->getContent(), $request->header('X-KopoKopo-Signature'))) {
+            return response()->json(['error' => 'invalid signature'], 401);
+        }
+        return response()->json(['ok' => true]);
+    }
 }

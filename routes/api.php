@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 // Kopo Kopo calls these; each request must be signed (X-KopoKopo-Signature)
 Route::post('/kk/webhook',      [KopoKopoController::class, 'webhook'])->name('kk.webhook');
 Route::post('/kk/stk-callback', [KopoKopoController::class, 'stkCallback'])->name('kk.stk.callback');
+Route::post('/kk/poll-callback', [KopoKopoController::class, 'pollCallback'])->name('kk.poll.callback');
 
 Route::middleware('bridge')->prefix('print')->group(function () {
     Route::get('/jobs/pending',      [PrintBridgeController::class, 'pending']);

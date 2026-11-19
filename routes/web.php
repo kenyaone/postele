@@ -94,6 +94,8 @@ Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->
     Route::put('/printers/{printer}', [$pc, 'update'])->name('printers.update');
     Route::delete('/printers/{printer}', [$pc, 'destroy'])->name('printers.destroy');
     Route::post('/printers/{printer}/test', [$pc, 'test'])->middleware('throttle:20,1')->name('printers.test');
+    Route::get('/printers/missed', [$pc, 'missed'])->name('printers.missed');
+    Route::post('/printers/missed', [$pc, 'reprintMissed'])->name('printers.missed.reprint');
     Route::get('/', [DashboardController::class, 'index'])->name('index');
     Route::get('/menu', [MenuController::class, 'index'])->name('menu');
     Route::get('/settings',   [SettingsController::class, 'edit'])->name('settings');

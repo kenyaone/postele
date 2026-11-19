@@ -12,6 +12,18 @@
 @endif
 
 @php
+    $__miss = 0;
+    if (! $__pa) { try { if (\Illuminate\Support\Facades\Schema::hasTable('printers')) $__miss = \App\Http\Controllers\Manage\PrintersController::missedQuery()->count(); } catch (\Throwable $e) {} }
+@endphp
+@if ($__miss > 0)
+    @if (auth()->check() && auth()->user()->role === 'manager')
+        <a href="{{ route('manage.printers.missed') }}" class="block bg-amber-400 hover:bg-amber-300 text-stone-900 text-sm font-semibold px-4 py-2 text-center print:hidden">&#9888; Printer is back. {{ $__miss }} slip(s) were not printed while it was off. <u>Choose which to reprint &rsaquo;</u></a>
+    @else
+        <div class="bg-amber-400 text-stone-900 text-sm font-semibold px-4 py-2 text-center print:hidden">&#9888; Printer is back. {{ $__miss }} slip(s) were not printed while it was off. Tell the manager, and tell the kitchen about any open orders.</div>
+    @endif
+@endif
+
+@php
     $__mp = false;
     try { $__mp = \App\Models\StkRequest::where('status', 'pending')->where('phone', '!=', 'kk-app')->where('created_at', '<=', now()->subMinutes(5))->where('created_at', '>=', now()->subHours(3))->exists(); } catch (\Throwable $e) {}
 @endphp
