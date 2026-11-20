@@ -22,3 +22,6 @@ Artisan::command('inspire', function () {
         $c->update(['photo' => null]);
     }
 })->name('purge-clock-photos')->dailyAt('03:10')->timezone('Africa/Nairobi')->withoutOverlapping();
+
+// Activity log is kept 90 days.
+\Illuminate\Support\Facades\Schedule::call(fn () => \App\Models\ActivityLog::where('created_at', '<', now()->subDays(90))->delete())->name('purge-activity-log')->dailyAt('03:20')->timezone('Africa/Nairobi')->withoutOverlapping();
