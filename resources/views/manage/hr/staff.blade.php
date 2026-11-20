@@ -115,6 +115,7 @@
                 <option value="">None</option>
                 @foreach ($logins as $u)<option value="{{ $u->id }}" @selected($staff->user_id == $u->id)>{{ $u->name }} ({{ $u->role }})</option>@endforeach
             </select></label>
+        <label class="block text-xs text-gray-500">Clock-in PIN {{ $staff->clock_pin_hash ? '(set; type a new one to change)' : ($staff->user_id ? '(optional: their POS PIN works)' : '(4-8 digits, needed to clock in)') }}<input name="clock_pin" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" autocomplete="off" class="w-full border rounded px-2 py-1"></label>
         <button class="w-full bg-gray-800 text-white rounded py-2">Save payroll details</button>
     </form>
 </div>

@@ -30,6 +30,7 @@ class StaffAttendanceController extends Controller
             'saved'    => $marks->isNotEmpty(),
             'statuses' => Payroll::STATUSES,
             'month'    => $month,
+            'clocks'   => \App\Models\StaffClock::whereDate('at', $day)->orderBy('at')->get()->groupBy('staff_id'),
         ]);
     }
 

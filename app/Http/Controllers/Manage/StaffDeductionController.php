@@ -36,7 +36,10 @@ class StaffDeductionController extends Controller
             'user_id'   => 'nullable|integer|exists:users,id',
             'id_number' => 'nullable|string|max:30',
             'pay_basis' => 'required|in:monthly,waiter',
+            'clock_pin' => 'nullable|digits_between:4,8',
         ]);
+        if (! empty($d['clock_pin'])) { $d['clock_pin_hash'] = \Illuminate\Support\Facades\Hash::make($d['clock_pin']); }
+        unset($d['clock_pin']);
         $staff->forceFill($d)->save();
         return back()->with('ok', 'Payroll details saved.');
     }

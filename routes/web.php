@@ -123,6 +123,7 @@ Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->
     Route::post('/hr/staff/{staff}/deductions', [\App\Http\Controllers\Manage\StaffDeductionController::class, 'store'])->name('hr.deductions.store');
     Route::delete('/hr/deductions/{deduction}', [\App\Http\Controllers\Manage\StaffDeductionController::class, 'destroy'])->name('hr.deductions.destroy');
     Route::post('/hr/staff/{staff}/details', [\App\Http\Controllers\Manage\StaffDeductionController::class, 'details'])->name('hr.staff.details');
+    Route::get('/hr/clock/{clock}/photo', [\App\Http\Controllers\ClockController::class, 'photo'])->name('hr.clock.photo');
 
     Route::get('/users',              [UserController::class, 'index'])->name('users.index');
     Route::post('/users',             [UserController::class, 'store'])->name('users.store');
@@ -170,3 +171,7 @@ Route::middleware(['auth', 'role:stock,manager'])->prefix('stock')->name('stock.
 Route::get('/p/{code}', [\App\Http\Controllers\PayController::class, 'show'])->middleware('throttle:60,1')->name('pay.show');
 Route::post('/p/{code}', [\App\Http\Controllers\PayController::class, 'send'])->middleware('throttle:6,1')->name('pay.send');
 Route::get('/p/{code}/status', [\App\Http\Controllers\PayController::class, 'status'])->middleware('throttle:90,1')->name('pay.status');
+
+// Photo clock in / out for staff (POS screen). PIN + camera snapshot.
+Route::get('/clock', [\App\Http\Controllers\ClockController::class, 'show'])->middleware('throttle:60,1')->name('clock');
+Route::post('/clock', [\App\Http\Controllers\ClockController::class, 'store'])->middleware('throttle:12,1')->name('clock.store');

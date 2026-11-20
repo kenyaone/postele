@@ -10,7 +10,7 @@
             <h2 class="font-semibold">Payroll for {{ $label }}</h2>
             @if ($next <= now()->format('Y-m'))<a href="{{ route('manage.hr', ['month' => $next]) }}" class="text-sm text-emerald-700 hover:underline">Next &rarr;</a>@else<span></span>@endif
         </div>
-        <div class="mb-3"><a href="{{ route('manage.hr.attendance') }}" class="inline-block text-sm bg-emerald-700 text-white rounded px-3 py-1">&#128197; Daily attendance register</a></div>
+        <div class="mb-3"><a href="{{ route('manage.hr.attendance') }}" class="inline-block text-sm bg-emerald-700 text-white rounded px-3 py-1">&#128197; Daily attendance register</a> <a href="{{ route('clock') }}" target="_blank" class="inline-block text-sm border border-emerald-700 text-emerald-700 rounded px-3 py-1 ml-1">&#128247; Clock-in screen</a></div>
         @if ($rows->isEmpty())
             <p class="text-sm text-gray-400 italic">No staff yet. Add your first staff member on the right.</p>
         @else

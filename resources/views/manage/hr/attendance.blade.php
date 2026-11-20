@@ -33,6 +33,7 @@
                     <td class="py-2 pr-2">
                         <div class="font-medium">{{ $s->name }}</div>
                         <div class="text-xs text-gray-400">{{ $s->position }}@if ($s->user_id) &middot; <span class="{{ $bills ? 'text-emerald-700' : '' }}">{{ $bills }} bill(s)</span>@endif</div>
+                        <div>@foreach ($clocks[$s->id] ?? [] as $ck)<a href="{{ route('manage.hr.clock.photo', $ck) }}" target="_blank" class="text-xs mr-2 {{ $ck->kind === 'in' ? 'text-emerald-700' : 'text-orange-700' }} hover:underline">&#128247; {{ $ck->kind }} {{ $ck->at->format('H:i') }}</a>@endforeach</div>
                     </td>
                     @foreach ($statuses as $key => $label)
                         <td class="py-2 text-center"><input type="radio" class="w-5 h-5" name="status[{{ $s->id }}]" value="{{ $key }}" @checked($cur === $key)></td>

@@ -35,6 +35,7 @@
 
             <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg py-3">Sign in</button>
         </form>
+        <p style="text-align:center;margin-top:14px"><a href="{{ route('clock') }}" style="display:inline-block;padding:10px 18px;border-radius:10px;background:#047857;color:#fff;text-decoration:none;font-weight:bold">&#128247; Staff clock in / out</a></p>
     </div>
     <script>
         (function () {
