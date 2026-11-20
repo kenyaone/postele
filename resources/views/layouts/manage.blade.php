@@ -52,6 +52,7 @@
         ['HR &amp; Payroll', 'manage.hr',             '&#128101;', 'manage.hr*',          ['manager']],
         ['Reports',          'manage.reports',        '&#128202;', 'manage.reports',     ['manager']],
         ['Waiters',      'manage.reports.staff',  '&#127942;', 'manage.reports.staff',     ['manager']],
+        ['Meat check', 'manage.reports.meat', '&#129385;', 'manage.reports.meat', ['manager']],
         ['Users',            'manage.users.index',    '&#128100;', 'manage.users.*',      ['manager']],
         ['Settings',         'manage.settings',       '&#9881;',   'manage.settings*',    ['manager']],
     ];

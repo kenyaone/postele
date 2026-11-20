@@ -29,6 +29,8 @@
         <div style="margin-top:16px;padding:12px 16px;border-radius:12px;background:#ecfdf5;border:1px solid #a7f3d0;font-size:14px;">&#10003; All M-Pesa payments are on bills, no unpaid bills, no cancellations.</div>
     @endif
 
+    <h3 style="{{ $h }}">Meat check</h3>
+    <table width="100%" cellspacing="0">@foreach ($meat as $mName => $mr)<tr><td style="{{ $td }}">{{ $mName }}</td><td style="{{ $td }}text-align:right;">@if ($mr->counted){{ rtrim(rtrim(number_format($mr->used, 2), '0'), '.') }} kg used &rarr; {{ (int) $mr->plates }} plates ({{ $mr->perKg ?? '' }} per kg, target {{ $mr->target }})@if ($mr->missing) <b style="color:#b91c1c">&middot; {{ (int) $mr->missing }} plates short</b>@endif @else<span style="color:#b91c1c">not counted &mdash; weigh the meat at closing</span>@endif</td></tr>@endforeach</table>
     <h3 style="{{ $h }}">Money collected today, by method</h3>
     <table width="100%" cellspacing="0">
         @foreach ($labels as $key => $label)
