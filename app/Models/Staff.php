@@ -11,6 +11,21 @@ class Staff extends Model
     protected $fillable = ['name', 'phone', 'position', 'monthly_salary', 'start_date', 'active'];
     protected $casts = ['monthly_salary' => 'decimal:2', 'start_date' => 'date', 'active' => 'boolean'];
 
+    public function deductions(): HasMany
+    {
+        return $this->hasMany(\App\Models\StaffDeduction::class)->orderByDesc('incurred_on');
+    }
+
+    public function attendance(): HasMany
+    {
+        return $this->hasMany(\App\Models\StaffAttendance::class);
+    }
+
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class);
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(StaffPayment::class);

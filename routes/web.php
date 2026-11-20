@@ -118,6 +118,11 @@ Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->
     Route::patch('/hr/staff/{staff}',         [HrController::class, 'updateStaff'])->name('hr.staff.update');
     Route::post('/hr/staff/{staff}/payments', [HrController::class, 'storePayment'])->name('hr.payments.store');
     Route::delete('/hr/payments/{payment}',   [HrController::class, 'destroyPayment'])->name('hr.payments.destroy');
+    Route::get('/hr/attendance', [\App\Http\Controllers\Manage\StaffAttendanceController::class, 'index'])->name('hr.attendance');
+    Route::post('/hr/attendance', [\App\Http\Controllers\Manage\StaffAttendanceController::class, 'store'])->name('hr.attendance.store');
+    Route::post('/hr/staff/{staff}/deductions', [\App\Http\Controllers\Manage\StaffDeductionController::class, 'store'])->name('hr.deductions.store');
+    Route::delete('/hr/deductions/{deduction}', [\App\Http\Controllers\Manage\StaffDeductionController::class, 'destroy'])->name('hr.deductions.destroy');
+    Route::post('/hr/staff/{staff}/details', [\App\Http\Controllers\Manage\StaffDeductionController::class, 'details'])->name('hr.staff.details');
 
     Route::get('/users',              [UserController::class, 'index'])->name('users.index');
     Route::post('/users',             [UserController::class, 'store'])->name('users.store');

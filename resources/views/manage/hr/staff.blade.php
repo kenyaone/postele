@@ -59,5 +59,63 @@
         <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="active" value="1" {{ $staff->active ? 'checked' : '' }}> Currently employed</label>
         <button class="w-full bg-gray-800 text-white rounded py-2">Save</button>
     </form>
+    @php $pr = $payrow; $kf = fn ($v) => number_format((float) $v, 2); @endphp
+    <div class="bg-white rounded-xl shadow p-4 space-y-2">
+        <h2 class="font-semibold">Pay for {{ \Carbon\Carbon::createFromFormat('Y-m-d', $period . '-01')->format('F Y') }}</h2>
+        <table class="w-full text-sm">
+            <tr><td class="py-1">{{ $staff->pay_basis === 'waiter' ? 'Earned (KSh 240/day + commission)' : 'Monthly salary' }}</td><td class="py-1 text-right">{{ $kf($pr->base) }}</td></tr>
+            <tr><td class="py-1">Absent {{ $pr->absent }} day(s){{ $staff->pay_basis === 'waiter' ? '' : '  ' . $kf($pr->dayRate) }}</td><td class="py-1 text-right">&minus;{{ $kf($pr->absenceDeduction) }}</td></tr>
+            <tr><td class="py-1">Damages / losses (this month&rsquo;s instalment)</td><td class="py-1 text-right">&minus;{{ $kf($pr->damages) }}</td></tr>
+            <tr class="font-semibold border-t"><td class="py-1">Net due</td><td class="py-1 text-right">{{ $kf($pr->due) }}</td></tr>
+            <tr><td class="py-1">Paid (salary + advances)</td><td class="py-1 text-right">&minus;{{ $kf($pr->paid) }}</td></tr>
+            <tr class="font-semibold"><td class="py-1">Balance to pay</td><td class="py-1 text-right {{ $pr->balance > 0 ? 'text-amber-700' : 'text-emerald-700' }}">{{ $kf($pr->balance) }}</td></tr>
+        </table>
+        @if ($absences->count())
+            <p class="text-xs text-gray-500">Not present: @foreach ($absences as $a){{ $a->day->format('j M') }} ({{ \App\Services\Payroll::STATUSES[$a->status] ?? $a->status }}{{ $a->note ? ': ' . $a->note : '' }})@if (! $loop->last), @endif @endforeach</p>
+        @endif
+        <a href="{{ route('manage.hr.attendance') }}" class="text-xs text-emerald-700 hover:underline">Open the attendance register &rarr;</a>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 space-y-3">
+        <h2 class="font-semibold">Damages &amp; losses</h2>
+        @forelse ($staff->deductions as $d)
+            @php $rec = $d->recoveredBy($period); @endphp
+            <div class="text-sm border-b last:border-0 pb-2 flex justify-between gap-2">
+                <div>
+                    <div class="font-medium">{{ $d->reason }}</div>
+                    <div class="text-xs text-gray-500">{{ $d->incurred_on->format('j M Y') }} &middot; KSh {{ $kf($d->total) }} at {{ $kf($d->per_month) }}/month from {{ \Carbon\Carbon::createFromFormat('Y-m-d', $d->start_period . '-01')->format('M Y') }} &middot; recovered {{ $kf($rec) }}, left {{ $kf((float) $d->total - $rec) }}</div>
+                </div>
+                <form method="POST" action="{{ route('manage.hr.deductions.destroy', $d) }}" onsubmit="return confirm('Remove this deduction?')">@csrf @method('DELETE')<button class="text-xs text-red-700 hover:underline">Remove</button></form>
+            </div>
+        @empty
+            <p class="text-sm text-gray-400 italic">No damages or losses charged.</p>
+        @endforelse
+        <form method="POST" action="{{ route('manage.hr.deductions.store', $staff) }}" class="space-y-2 border-t pt-3">
+            @csrf
+            <input name="reason" required maxlength="150" placeholder="What happened (e.g. broke 2 plates, short cash)" class="w-full border rounded px-2 py-1">
+            <div class="grid grid-cols-2 gap-2">
+                <label class="text-xs text-gray-500">Date<input type="date" name="incurred_on" required value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" class="w-full border rounded px-2 py-1"></label>
+                <label class="text-xs text-gray-500">Total KSh<input type="number" name="total" required min="1" step="0.01" class="w-full border rounded px-2 py-1"></label>
+                <label class="text-xs text-gray-500">Per month KSh<input type="number" name="per_month" required min="1" step="0.01" class="w-full border rounded px-2 py-1"></label>
+                <label class="text-xs text-gray-500">First month<input type="month" name="start_period" required value="{{ $period }}" class="w-full border rounded px-2 py-1"></label>
+            </div>
+            <button class="w-full bg-gray-800 text-white rounded py-2">Charge to {{ $staff->name }}</button>
+        </form>
+    </div>
+    <form method="POST" action="{{ route('manage.hr.staff.details', $staff) }}" class="bg-white rounded-xl shadow p-4 space-y-2">
+        @csrf
+        <h2 class="font-semibold">Payroll details</h2>
+        <label class="block text-xs text-gray-500">ID number<input name="id_number" maxlength="30" value="{{ $staff->id_number }}" class="w-full border rounded px-2 py-1"></label>
+        <label class="block text-xs text-gray-500">Paid as
+            <select name="pay_basis" class="w-full border rounded px-2 py-1">
+                <option value="monthly" @selected($staff->pay_basis !== 'waiter')>Monthly salary (absences deducted)</option>
+                <option value="waiter" @selected($staff->pay_basis === 'waiter')>Waiter: KSh 240/day + commission from the POS</option>
+            </select></label>
+        <label class="block text-xs text-gray-500">POS login (needed for waiter pay)
+            <select name="user_id" class="w-full border rounded px-2 py-1">
+                <option value="">None</option>
+                @foreach ($logins as $u)<option value="{{ $u->id }}" @selected($staff->user_id == $u->id)>{{ $u->name }} ({{ $u->role }})</option>@endforeach
+            </select></label>
+        <button class="w-full bg-gray-800 text-white rounded py-2">Save payroll details</button>
+    </form>
 </div>
 @endsection

@@ -10,30 +10,39 @@
             <h2 class="font-semibold">Payroll for {{ $label }}</h2>
             @if ($next <= now()->format('Y-m'))<a href="{{ route('manage.hr', ['month' => $next]) }}" class="text-sm text-emerald-700 hover:underline">Next &rarr;</a>@else<span></span>@endif
         </div>
+        <div class="mb-3"><a href="{{ route('manage.hr.attendance') }}" class="inline-block text-sm bg-emerald-700 text-white rounded px-3 py-1">&#128197; Daily attendance register</a></div>
         @if ($rows->isEmpty())
             <p class="text-sm text-gray-400 italic">No staff yet. Add your first staff member on the right.</p>
         @else
         <table class="w-full text-sm">
-            <thead class="text-left text-gray-500 border-b"><tr><th class="py-1">Staff</th><th class="py-1 text-right">Salary</th><th class="py-1 text-right">Advances</th><th class="py-1 text-right">Paid</th><th class="py-1 text-right">Still owed</th><th class="py-1 text-right">Bonus</th><th></th></tr></thead>
+            <thead class="text-left text-gray-500 border-b"><tr>
+                <th class="py-1">Staff</th><th class="py-1 text-right">Pay earned</th><th class="py-1 text-right">Days absent</th>
+                <th class="py-1 text-right">Absence</th><th class="py-1 text-right">Damages</th><th class="py-1 text-right">Net due</th>
+                <th class="py-1 text-right">Paid</th><th class="py-1 text-right">Balance</th>
+            </tr></thead>
             <tbody>
             @foreach ($rows as $r)
                 <tr class="border-b last:border-0 {{ $r->staff->active ? '' : 'text-gray-400' }}">
-                    <td class="py-2"><a href="{{ route('manage.hr.staff', [$r->staff, 'month' => $period]) }}" class="font-medium hover:underline">{{ $r->staff->name }}</a> <span class="text-xs text-gray-400">{{ $r->staff->position }}</span></td>
-                    <td class="py-2 text-right">{{ $ksh($r->due) }}</td>
-                    <td class="py-2 text-right">{{ $r->advance ? $ksh($r->advance) : '-' }}</td>
-                    <td class="py-2 text-right">{{ $r->salary ? $ksh($r->salary) : '-' }}</td>
-                    <td class="py-2 text-right font-semibold {{ $r->balance > 0 ? 'text-red-700' : 'text-emerald-700' }}">{{ $r->balance > 0 ? $ksh($r->balance) : ($r->balance < 0 ? 'over ' . $ksh(-$r->balance) : 'paid') }}</td>
-                    <td class="py-2 text-right">{{ $r->bonus ? $ksh($r->bonus) : '-' }}</td>
-                    <td class="py-2 pl-2 text-right"><a href="{{ route('manage.hr.staff', [$r->staff, 'month' => $period]) }}" class="text-emerald-700 hover:underline text-xs">Pay</a></td>
+                    <td class="py-2"><a href="{{ route('manage.hr.staff', [$r->staff, 'month' => $period]) }}" class="font-medium hover:underline">{{ $r->staff->name }}</a>
+                        <div class="text-xs text-gray-400">{{ $r->staff->position }}{{ $r->staff->pay_basis === 'waiter' ? '  KSh 240/day + commission' : '' }}</div></td>
+                    <td class="py-2 text-right">{{ $ksh($r->base) }}</td>
+                    <td class="py-2 text-right {{ $r->absent ? 'text-red-700 font-semibold' : 'text-gray-300' }}">{{ $r->absent }}</td>
+                    <td class="py-2 text-right">{{ $r->absenceDeduction ? '' . $ksh($r->absenceDeduction) : '' }}</td>
+                    <td class="py-2 text-right">{{ $r->damages ? '' . $ksh($r->damages) : '' }}</td>
+                    <td class="py-2 text-right font-medium">{{ $ksh($r->due) }}</td>
+                    <td class="py-2 text-right">{{ $ksh($r->paid) }}</td>
+                    <td class="py-2 text-right font-semibold {{ $r->balance > 0 ? 'text-amber-700' : 'text-emerald-700' }}">{{ $ksh($r->balance) }}</td>
                 </tr>
             @endforeach
             </tbody>
-            <tfoot class="font-semibold border-t">
-                <tr><td class="py-2">Total</td><td class="py-2 text-right">{{ $ksh($rows->sum('due')) }}</td><td class="py-2 text-right">{{ $ksh($rows->sum('advance')) }}</td><td class="py-2 text-right">{{ $ksh($rows->sum('salary')) }}</td><td class="py-2 text-right text-red-700">{{ $ksh($rows->sum(fn ($r) => max(0, $r->balance))) }}</td><td class="py-2 text-right">{{ $ksh($rows->sum('bonus')) }}</td><td></td></tr>
-            </tfoot>
+            <tfoot class="font-semibold border-t"><tr>
+                <td class="py-2">Total</td><td class="py-2 text-right">{{ $ksh($rows->sum('base')) }}</td><td class="py-2 text-right">{{ $rows->sum('absent') }}</td>
+                <td class="py-2 text-right">{{ $ksh($rows->sum('absenceDeduction')) }}</td><td class="py-2 text-right">{{ $ksh($rows->sum('damages')) }}</td>
+                <td class="py-2 text-right">{{ $ksh($rows->sum('due')) }}</td><td class="py-2 text-right">{{ $ksh($rows->sum('paid')) }}</td><td class="py-2 text-right">{{ $ksh($rows->sum('balance')) }}</td>
+            </tr></tfoot>
         </table>
         @endif
-        <p class="text-xs text-gray-400 mt-3">Advances count towards that month&rsquo;s salary. Bonuses are extra.</p>
+        <p class="text-xs text-gray-400 mt-3">Waiters earn KSh 240 per qualifying day plus commission, straight from the POS. Monthly staff lose salary &divide; 30 for each day marked Absent. Damages come off in the monthly instalment set on each person&rsquo;s page. Paid = salary + advances (bonuses are extra).</p>
     </div>
 
     <div class="space-y-6">

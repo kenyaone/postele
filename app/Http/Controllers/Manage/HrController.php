@@ -31,6 +31,8 @@ class HrController extends Controller
                 ];
             })->values();
 
+        $rows = app(\App\Services\Payroll::class)->forPeriod($period);
+
         return view('manage.hr.index', [
             'period'     => $period,
             'label'      => $from->format('F Y'),
@@ -50,6 +52,15 @@ class HrController extends Controller
     public function showStaff(Request $request, Staff $staff)
     {
         $period = $this->period($request->query('month'));
+        $staff->load('deductions.recorder');
+        $pay = app(\App\Services\Payroll::class);
+        [$pf, $pt] = $pay->range($period);
+        view()->share([
+            'payrow'   => $pay->row($staff, $period),
+            'absences' => $staff->attendance()->where('status', '!=', 'present')->whereBetween('day', [$pf->toDateString(), $pt->toDateString()])->orderBy('day')->get(),
+            'logins'   => \App\Models\User::orderBy('name')->get(['id', 'name', 'role']),
+        ]);
+
         return view('manage.hr.staff', [
             'staff'    => $staff,
             'period'   => $period,
