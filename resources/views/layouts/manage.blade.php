@@ -54,6 +54,7 @@
         ['Waiters',      'manage.reports.staff',  '&#127942;', 'manage.reports.staff',     ['manager']],
         ['Meat check', 'manage.reports.meat', '&#129385;', 'manage.reports.meat', ['manager']],
         ['Activity log', 'manage.activity', '&#128065;', 'manage.activity', ['manager']],
+        ['Cash handovers', 'manage.reports.closes', '&#128181;', 'manage.reports.closes', ['manager']],
         ['Users',            'manage.users.index',    '&#128100;', 'manage.users.*',      ['manager']],
         ['Settings',         'manage.settings',       '&#9881;',   'manage.settings*',    ['manager']],
     ];

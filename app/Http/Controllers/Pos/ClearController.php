@@ -45,7 +45,8 @@ class ClearController extends Controller
             ->whereNotIn('reference', Payment::whereNotNull('kk_reference')->select('kk_reference'))
             ->orderByDesc('received_at')->get();
 
-        return view('pos.clear', compact('bills', 'events', 'waiters', 'waiterId', 'isManager'));
+        $suggest = app(\App\Services\ClearSuggest::class)->match($bills, $events);
+        return view('pos.clear', compact('bills', 'events', 'waiters', 'waiterId', 'isManager', 'suggest'));
     }
 
     /** Manager only: link a payment from the list (tap the payment, tick the bills, give a reason for other waiters' bills). */

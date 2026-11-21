@@ -47,6 +47,10 @@ class PosController extends Controller
             return redirect()->route('pos.shift.openForm');
         }
 
+        if ($user->role !== 'manager' && ($due = app(\App\Services\DayCloseService::class)->pendingDay($user->id))) {
+            return redirect()->route('pos.dayend', ['day' => $due])->withErrors(['dayend' => 'Close your day for ' . \Carbon\Carbon::parse($due)->format('D j M') . ' first: count your cash and explain any unpaid bills.']);
+        }
+
         $ticket = Ticket::create([
             'opened_by' => $user->id,
             'status'    => 'open',

@@ -57,14 +57,14 @@
                     $digits = preg_replace('/\D/', '', (string) ($r['sender_phone_number'] ?? ''));
                     $phone = strlen($digits) >= 9 ? '0' . substr($digits, -9, 3) . ' *** ' . substr($digits, -3) : '';
                 @endphp
-                <label class="ev flex items-center gap-3 rounded-xl px-3 py-2.5 ring-1 ring-gray-200 cursor-pointer hover:bg-green-50" data-amount="{{ (float) $ev->amount }}" data-at="{{ $ev->received_at?->timestamp }}">
+                <label class="ev flex items-center gap-3 rounded-xl px-3 py-2.5 ring-1 ring-gray-200 cursor-pointer hover:bg-green-50" data-amount="{{ (float) $ev->amount }}" data-at="{{ $ev->received_at?->timestamp }}" data-suggest="{{ implode(',', empty($suggest[$ev->id]['other']) ? ($suggest[$ev->id]['ids'] ?? []) : []) }}">
                     <input type="radio" name="event_id" value="{{ $ev->id }}" class="w-5 h-5 accent-green-600" @checked((int) old('event_id') === $ev->id)>
                     <span class="flex-1 min-w-0">
                         <span class="block font-semibold truncate">{{ $who !== '' ? $who : ($phone !== '' ? $phone : 'Customer') }}</span>
                         <span class="block text-xs text-gray-500 font-mono">{{ $ev->received_at?->format('D H:i') }} &middot; {{ $ev->reference }}</span>
                         <span class="hint block text-xs font-bold text-green-700"></span>
                     </span>
-                    <span class="font-extrabold shrink-0">KSh {{ number_format((float) $ev->amount) }}</span>
+                    <span class="font-extrabold shrink-0">KSh {{ number_format((float) $ev->amount) }}</span>@if (isset($suggest[$ev->id]))<span style="display:block;font-size:12px;font-weight:600;color:#047857">Fits {{ $suggest[$ev->id]['label'] }}{{ $suggest[$ev->id]['other'] ? ' (other groups also fit, check the SMS)' : '' }}</span>@endif
                 </label>
             @endforeach
             </div>
@@ -161,7 +161,9 @@
             ticked().forEach(function (x) { x.checked = false; });
             var lab = e.target.closest('.ev'), m = matches(lab);
             form.querySelectorAll('.bill').forEach(function (b) { b.querySelector('.same').classList.toggle('hidden', m.indexOf(b) < 0); });
-            if (m.length === 1) m[0].querySelector('input').checked = true;
+            var sg = (lab && lab.dataset.suggest) ? lab.dataset.suggest.split(',').filter(Boolean) : [];
+            if (sg.length > 1) { sg.forEach(function (id) { var bx = form.querySelector('input[name="bills[]"][value="' + id + '"]'); if (bx) bx.checked = true; }); }
+            else if (m.length === 1) m[0].querySelector('input').checked = true;
             if (m.length) m[0].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
         refresh();

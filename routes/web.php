@@ -37,6 +37,8 @@ Route::middleware(['auth', 'role:cashier,waiter,manager'])->prefix('pos')->name(
     Route::get('/bills', [\App\Http\Controllers\Pos\BillsController::class, 'index'])->name('bills');
     Route::get('/clear', [\App\Http\Controllers\Pos\ClearController::class, 'index'])->name('clear');
     Route::post('/clear', [\App\Http\Controllers\Pos\ClearController::class, 'store'])->middleware('throttle:30,1')->name('clear.store');
+    Route::get('/day-end', [\App\Http\Controllers\Pos\DayEndController::class, 'show'])->name('dayend');
+    Route::post('/day-end', [\App\Http\Controllers\Pos\DayEndController::class, 'store'])->middleware('throttle:10,1')->name('dayend.store');
     Route::post('/clear/code', [\App\Http\Controllers\Pos\ClearController::class, 'code'])->middleware('throttle:20,1')->name('clear.code');
     Route::get('/backdate', [\App\Http\Controllers\Pos\BackdateController::class, 'create'])->middleware('role:manager')->name('backdate');
     Route::post('/backdate', [\App\Http\Controllers\Pos\BackdateController::class, 'store'])->middleware('role:manager')->name('backdate.store');
@@ -113,6 +115,7 @@ Route::middleware(['auth', 'role:manager'])->prefix('manage')->name('manage.')->
     Route::get('/reports/waiters', [ReportController::class, 'staff'])->name('reports.staff');
     Route::get('/reports/meat', [\App\Http\Controllers\Manage\MeatReportController::class, 'index'])->name('reports.meat');
     Route::get('/activity', [\App\Http\Controllers\Manage\ActivityController::class, 'index'])->name('activity');
+    Route::get('/reports/day-closes', [\App\Http\Controllers\Manage\DayCloseReportController::class, 'index'])->name('reports.closes');
 
     Route::get('/hr',                         [HrController::class, 'index'])->name('hr');
     Route::post('/hr/staff',                  [HrController::class, 'storeStaff'])->name('hr.staff.store');

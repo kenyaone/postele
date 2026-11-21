@@ -72,8 +72,9 @@ class DailySummary extends Command
         $staff = $pays->groupBy(fn ($p) => $p->ticket->opener->name ?? '?')->map(fn ($g) => ['orders' => $g->pluck('ticket_id')->unique()->count(), 'sales' => $g->sum('amount')])->sortByDesc('sales');
 
         $staff = $dayBills->groupBy(fn ($t) => $t->opener->name ?? '?')->map(fn ($g) => ['orders' => $g->count(), 'sales' => (float) $g->sum('total')])->sortByDesc('sales');
+        $closes = \App\Models\DayClose::with('user:id,name')->whereDate('day', $day)->get();
         $meat = app(\App\Services\MeatCheck::class)->day($day->copy());
-        $data = compact('day', 'sales', 'orders', 'byMethod', 'byChannel', 'top', 'voids', 'openBills', 'unlinked', 'credit', 'cashIn', 'staff', 'collected', 'collectedOrders', 'paidOrders', 'oldCleared', 'mpesaReceived', 'backlog', 'lateLinked', 'meat');
+        $data = compact('day', 'sales', 'orders', 'byMethod', 'byChannel', 'top', 'voids', 'openBills', 'unlinked', 'credit', 'cashIn', 'staff', 'collected', 'collectedOrders', 'paidOrders', 'oldCleared', 'mpesaReceived', 'backlog', 'lateLinked', 'meat', 'closes');
         $html = view('emails.daily-summary', $data)->render();
         $subject = config('pos.cafe_name', 'Tele Cafe') . ' ' . $day->format('D j M') . ': KSh ' . number_format($sales) . ' sales'
             . ($unlinked->count() ? ', ' . $unlinked->count() . ' M-Pesa not on a bill' : '') . ($openBills->count() ? ', ' . $openBills->count() . ' unpaid' : '');

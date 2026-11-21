@@ -29,6 +29,9 @@
         <div style="margin-top:16px;padding:12px 16px;border-radius:12px;background:#ecfdf5;border:1px solid #a7f3d0;font-size:14px;">&#10003; All M-Pesa payments are on bills, no unpaid bills, no cancellations.</div>
     @endif
 
+    <h3 style="{{ $h }}">Cash handovers</h3>
+    @if ($closes->isEmpty())<p style="font-size:13px;color:#b91c1c;">No waiter has closed this day yet (End my day on the POS).</p>@else
+    <table width="100%" cellspacing="0">@foreach ($closes as $c)@php $g = $c->shortfall(); @endphp<tr><td style="{{ $td }}">{{ $c->user->name ?? '?' }}</td><td style="{{ $td }}text-align:right;">recorded {{ $k($c->cash_expected) }} &middot; handed over {{ $k($c->cash_declared) }} @if ($g > 0.004)<b style="color:#b91c1c">&middot; SHORT {{ $k($g) }}</b>@elseif ($g < -0.004)&middot; over {{ $k(-$g) }}@else &middot; OK @endif @if ($c->unpaid_count) &middot; {{ $c->unpaid_count }} unpaid explained @endif</td></tr>@endforeach</table>@endif
     <h3 style="{{ $h }}">Meat check</h3>
     <table width="100%" cellspacing="0">@foreach ($meat as $mName => $mr)<tr><td style="{{ $td }}">{{ $mName }}</td><td style="{{ $td }}text-align:right;">@if ($mr->counted){{ rtrim(rtrim(number_format($mr->used, 2), '0'), '.') }} kg used &rarr; {{ (int) $mr->plates }} plates ({{ $mr->perKg ?? '' }} per kg, target {{ $mr->target }})@if ($mr->missing) <b style="color:#b91c1c">&middot; {{ (int) $mr->missing }} plates short</b>@endif @else<span style="color:#b91c1c">not counted &mdash; weigh the meat at closing</span>@endif</td></tr>@endforeach</table>
     <h3 style="{{ $h }}">Money collected today, by method</h3>
