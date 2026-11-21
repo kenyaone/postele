@@ -156,8 +156,8 @@
                         <span><span class="animate-pulse">&#9679;</span> With the kitchen @if ($sentAt) since {{ \Illuminate\Support\Carbon::parse($sentAt)->format('H:i') }} @endif</span>
                         @include('pos.partials.print-status')
                     </div>
-                    @if ($ticket->payments->isEmpty())<form method="POST" action="{{ route('pos.tickets.reopen', $ticket) }}" class="mb-3">@csrf<button class="w-full rounded-xl py-2.5 text-sm font-bold bg-white ring-2 ring-roast/15 hover:bg-crema">&#43; Add more items</button></form>@endif
-                    @if ($ticket->payments->isEmpty() && (int) $ticket->items->sum('qty') > 1)<a href="{{ route('pos.tickets.split', $ticket) }}" class="mb-3 block w-full rounded-xl py-2.5 text-center text-sm font-bold bg-white ring-2 ring-roast/15 hover:bg-crema">&#9986; Split bill<span class="block text-xs font-normal opacity-70">Move some dishes to a new bill, so each person pays their own</span></a>@endif
+                    @if ($ticket->status === 'sent')<form method="POST" action="{{ route('pos.tickets.reopen', $ticket) }}" class="mb-3">@csrf<button class="w-full rounded-xl py-2.5 text-sm font-bold bg-white ring-2 ring-roast/15 hover:bg-crema">&#43; Add more items</button></form>@endif
+                    @if ((int) $ticket->items->sum('qty') > 1)<a href="{{ route('pos.tickets.split', $ticket) }}" class="mb-3 block w-full rounded-xl py-2.5 text-center text-sm font-bold bg-white ring-2 ring-roast/15 hover:bg-crema">&#9986; Split bill<span class="block text-xs font-normal opacity-70">Move some dishes to a new bill, so each person pays their own</span></a>@endif
                     @if ($ticket->payments->isNotEmpty())
                     <div class="mb-3 rounded-2xl bg-amber-50 ring-1 ring-amber-200 p-3 text-sm">
                     <div class="font-bold text-amber-900 mb-1">Part paid</div>

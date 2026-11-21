@@ -153,7 +153,7 @@ class PosController extends Controller
     {
         $this->authorizeTicket($request, $ticket);
         abort_unless($ticket->status === 'sent', 403, 'Only a bill waiting for payment can take more items.');
-        abort_if($ticket->payments()->exists(), 403, 'A payment is already recorded on this bill.');
+        // Part-paid bills may take more dishes: the payment stays and the new dishes add to the balance.
         abort_if(\Illuminate\Support\Facades\DB::table('stk_requests')->where('ticket_id', $ticket->id)->where('status', 'pending')->exists(), 403, 'An M-Pesa prompt is still waiting on this bill. Wait for it to finish first.');
         $ticket->update(['status' => 'open']);
         return redirect()->route('pos.tickets.show', $ticket);
@@ -188,6 +188,13 @@ class PosController extends Controller
                     if ($q > (int) $line->qty) throw new \RuntimeException('You can move at most ' . $line->qty . ' x ' . ($line->item->name ?? 'that dish') . '.');
                 }
                 if ((int) $lines->sum('qty') - (int) $moves->sum() < 1) throw new \RuntimeException('Leave at least one dish on this bill.');
+                $paid = (float) $t->payments()->sum('amount');
+                if ($paid > 0) {
+                    $moved = $moves->reduce(fn ($s, $q, $id) => $s + $q * (float) $lines->get((int) $id)->unit_price, 0.0);
+                    if ((float) $t->total - $moved + 0.004 < $paid) {
+                        throw new \RuntimeException('KSh ' . number_format($paid) . ' is already paid on this bill. Leave dishes worth at least that here and move only the unpaid dishes.');
+                    }
+                }
 
                 $new = Ticket::create([
                     'opened_by' => $t->opened_by,
@@ -224,7 +231,7 @@ class PosController extends Controller
     private function cannotSplit(Ticket $t): ?string
     {
         if (! in_array($t->status, ['open', 'sent'], true)) return 'This bill is already closed.';
-        if ($t->payments()->exists()) return 'Part of this bill is already paid. Split a bill before taking any payment.';
+        // Part-paid bills can be split too; split() checks the paid part stays covered.
         if (\App\Models\StkRequest::where('ticket_id', $t->id)->where('status', 'pending')->where('phone', '!=', 'kk-app')->where('created_at', '>=', now()->subMinutes(3))->exists()) return 'An M-Pesa prompt is waiting on this bill. Wait for it to finish first.';
         if ((int) $t->items()->sum('qty') < 2) return 'There is only one dish on this bill, so there is nothing to split.';
         return null;
